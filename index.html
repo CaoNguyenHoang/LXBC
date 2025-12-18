@@ -38,7 +38,7 @@ img { max-width: 100%; display: block; }
 .chip.special { border-color: rgba(255,200,0,0.3); color: var(--brand); }
 .chip.special:hover { background: var(--brand); color: #000; }
 
-/* Sections - ĐÃ XÓA content-visibility ĐỂ TRÁNH LỖI CHỚP */
+/* Sections */
 .section { padding: 48px 0; border-bottom: 1px solid var(--border); }
 .section h2 { font-size: clamp(24px, 4vw, 36px); margin: 0 0 20px; font-weight: 800; letter-spacing: -1px; }
 
@@ -85,26 +85,32 @@ img { max-width: 100%; display: block; }
 .q-btn:hover { background: #222; color: #fff; }
 .q-btn.active { background: rgba(255,200,0,0.1); border-color: var(--brand); color: var(--brand); }
 
-/* ===== MEMBERS GRID (TỐI ƯU HIỂN THỊ) ===== */
+/* ===== MEMBERS GRID (ĐÃ FIX 3 CỘT CHO MOBILE) ===== */
+/* Mặc định là 3 cột cho mobile (nhỏ nhất) */
 .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-@media (min-width: 600px) { .team-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; } }
 
-/* TỐI ƯU CARD ĐỂ KHÔNG BỊ CHỚP */
+/* Màn hình lớn hơn thì tự động chia cột to hơn */
+@media (min-width: 600px) { 
+  .team-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; } 
+}
+
+/* Ẩn phần tử thông minh để không chớp */
+.hidden-item { display: none !important; }
+
+/* STYLE CARD */
 .member-card { 
   background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; 
   position: relative; cursor: pointer; 
-  /* Sửa lỗi chớp trên mobile */
   transform: translateZ(0); backface-visibility: hidden; will-change: transform;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 .member-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); border-color: #444; }
 
-/* SKELETON LOADING BACKGROUND */
+/* SKELETON LOADING */
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 .member-photo { 
   aspect-ratio: 3/4; overflow: hidden; 
   background: #1a1a1a; 
-  /* Hiệu ứng load giả lập */
   background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
@@ -127,7 +133,6 @@ img { max-width: 100%; display: block; }
 .act-card { 
   height: 320px; border-radius: 16px; position: relative; overflow: hidden; border: 1px solid var(--border); 
   background: #000;
-  /* Sửa lỗi chớp */
   transform: translateZ(0); backface-visibility: hidden; will-change: transform;
   transition: transform 0.3s; 
 }
@@ -330,7 +335,7 @@ const FOLDER_MEM = 'anh_thanh_vien';
 const FOLDER_ACT = 'anh_hoat_dong';
 
 // DEBOUNCE FUNCTION
-function debounce(func, timeout = 300){
+function debounce(func, timeout = 200){
   let timer;
   return (...args) => {
     clearTimeout(timer);
@@ -466,6 +471,44 @@ function updateContactInfo() {
   }
 }
 
+// === LOGIC TÍNH TOÁN HIỂN THỊ (QUAN TRỌNG ĐỂ KHÔNG CHỚP) ===
+function getLimit() {
+  const w = window.innerWidth;
+  if (w < 600) return 6; // MOBILE: 2 hàng x 3 cột = 6
+  
+  const cols = Math.floor((Math.min(w, 1200) - 32) / 180); 
+  let limit = cols * 2;
+  return limit < 8 ? 8 : limit;
+}
+
+function updateVisibility() {
+  const container = $('#team');
+  const items = container.children;
+  if (items.length === 0) return;
+
+  const limit = getLimit();
+  
+  // Logic ẩn/hiện bằng CSS class -> Không render lại DOM -> Không chớp
+  for (let i = 0; i < items.length; i++) {
+    if (showAllMem || i < limit) {
+      items[i].classList.remove('hidden-item');
+    } else {
+      items[i].classList.add('hidden-item');
+    }
+  }
+
+  // Cập nhật nút Xem thêm
+  const btnMore = $('#btnMore');
+  const total = items.length; 
+  
+  if (total > limit) {
+    btnMore.style.display = 'inline-flex';
+    btnMore.textContent = showAllMem ? 'Thu gọn' : `Xem thêm (${total - limit})`;
+  } else {
+    btnMore.style.display = 'none';
+  }
+}
+
 function renderTeam() {
   const term = rmAccent($('#searchInput').value);
   let list = MEMBERS;
@@ -489,46 +532,46 @@ function renderTeam() {
     'mem': ['#sec-mem', '#team', groups.mem]
   };
   
+  // Reset hiển thị
   for(let key in sections) $(sections[key][0]).style.display = 'none';
   $('#btnMore').style.display = 'none';
 
   if (activeFilterMode !== 'default') {
+    // Mode Filter: Render bình thường
     const [secId, boxId, data] = sections[activeFilterMode];
     if(data.length) { 
         $(secId).style.display='block'; 
         renderGrid($(boxId), data); 
     }
   } else {
-    const combinedList = [...groups.bdh, ...groups.mem];
-    $('#sec-mem').style.display = 'block';
-    
-    // Logic 3 cột mobile, 6 item
-    let limit = 12; 
-    const w = window.innerWidth;
-    if (w < 600) {
-      limit = 6; 
-    } else {
-      const cols = Math.floor((Math.min(w, 1200) - 32) / 180); 
-      limit = cols * 2;
-      if(limit < 8) limit = 8;
+    // Mode Mặc định: Hiển thị BĐH + Mem
+    if(groups.bdh.length) {
+       $('#sec-bdh').style.display = 'block';
+       renderGrid($('#team-bdh'), groups.bdh);
     }
 
-    const displayList = showAllMem ? combinedList : combinedList.slice(0, limit);
-    renderGrid($('#team'), displayList);
-    
-    if (combinedList.length > limit) {
-      $('#btnMore').style.display = 'inline-flex';
-      $('#btnMore').textContent = showAllMem ? 'Thu gọn' : `Xem thêm (${combinedList.length - limit})`;
+    if(groups.mem.length) {
+        $('#sec-mem').style.display = 'block';
+        // Render TOÀN BỘ mem vào DOM, sau đó mới dùng JS ẩn bớt
+        renderGrid($('#team'), groups.mem);
+        updateVisibility();
     }
   }
 }
 
+// Event Listeners cho việc hiển thị không chớp
+$('#btnMore').onclick = () => { 
+  showAllMem = !showAllMem; 
+  updateVisibility(); // Chỉ gọi hàm ẩn/hiện class
+};
+
 window.addEventListener('resize', debounce(() => {
-  if(activeFilterMode === 'default' && !showAllMem) renderTeam();
-}, 300));
+  if(activeFilterMode === 'default') {
+    updateVisibility(); // Chỉ gọi hàm ẩn/hiện class
+  }
+}, 200));
 
 function renderGrid(container, items) {
-  // Thêm decoding=async để tối ưu load ảnh
   container.innerHTML = items.map(m => `
     <div class="member-card" onclick="openMemberModal('${m.name}')">
       <div class="member-photo"><img src="${m.avatar}" loading="lazy" decoding="async" alt="${m.name}" onerror="this.src='image/logo.jpg'"></div>
@@ -647,7 +690,8 @@ function renderActs() {
 }
 
 $('#btnActMore').onclick = () => { showAllActs = !showAllActs; renderActs(); };
-$('#btnMore').onclick = () => { showAllMem = !showAllMem; renderTeam(); };
+// Note: btnMore for Team is handled by updateVisibility
+
 $('#btnLoad').onclick = async () => { const f = $('#excelFile').files[0]; if(f){ const b=await f.arrayBuffer(); parseMembers(b); } };
 
 /* ================= ORG CHART ================= */
@@ -678,35 +722,6 @@ function buildTimeline(){
 }
 
 /* ================= PRELOAD DATA ================= */
-const PRE_DATA = [
-  { name: "Vũ Tấn Lực", role: "Trưởng nhà", holy: "Phanxico Xavie", birth: "2005", school: "Đại học Yersin", major: "Quan hệ công chúng", join: "2023", avatar: "luc.jpg", fb: "https://web.facebook.com/lucc.vux.7", email: "luc3007vu@gmail.com", phone: "0346146212" },
-  { name: "Bùi Quốc Thái", role: "Quản lý", holy: "Phero-Phaolo", birth: "2006", school: "Đại học Yersin", major: "Công nghệ sinh học", join: "2024", avatar: "thai.jpg", fb: "https://www.facebook.com/quoc.thai.62138" },
-  { name: "Vũ Nguyễn Bình An", role: "Giám Linh", holy: "Phero", birth: "2006", school: "Đại học Đà Lạt", major: "Công nghệ thông tin", join: "2024", avatar: "an.jpg", fb: "https://www.facebook.com/annguyen201x" },
-  { name: "Bon Krong Y Doan", role: "Hội trực", holy: "Giuse", birth: "2005", school: "Cao Đẳng Đà Lạt", major: "Công nghệ thông tin", join: "2023", avatar: "doan.jpg", fb: "https://www.facebook.com/emdoantoichoi" },
-  { name: "Cao Nguyên Hoàng", role: "Thành Viên", holy: "Giuse", birth: "2006", school: "Đại Học Đà Lạt", major: "Công nghệ thông tin", join: "2024", avatar: "hoang.jpg", fb: "https://www.facebook.com/caonguyenhoang1026", email: "2411841@dlu.edu.vn" },
-  { name: "Trần Anh Dũng", role: "Thành viên", holy: "Giuse", birth: "2006", school: "Cao Đẳng Đà Lạt", major: "CN kỹ thuật ô tô", join: "2024", avatar: "dung.jpg", fb: "https://www.facebook.com/tran.dung.489667" },
-  { name: "Nguyễn Duy Khang", role: "Thành viên", holy: "Đaminh", birth: "2006", school: "Cao Đẳng Đà Lạt", major: "CN kỹ thuật ô tô", join: "2024", avatar: "khang.jpg", fb: "https://www.facebook.com/nguyen.duy.khang.867135" },
-  { name: "Tpúh Cao Trưởng", role: "Thành viên", holy: "Luca", birth: "2003", school: "Đại học Đà Lạt", major: "Du Lịch", join: "2021", avatar: "truong.jpg", fb: "https://www.facebook.com/truong.tpuh" },
-  { name: "Nguyễn Quang Tuyến", role: "Thành Viên", holy: "Đaminh", birth: "2007", school: "Cao Đẳng Y Tế", major: "Xét nghiệm Y học", join: "2025", avatar: "tuyen.jpg", fb: "https://www.facebook.com/nguyen.q.tuyen.2025" },
-  { name: "Nguyễn Hữu Anh", role: "Thành viên", holy: "Giuse", birth: "2006", school: "Đại học Yersin", major: "Thiết kế nội thất", join: "2024", avatar: "huu.jpg", fb: "https://www.facebook.com/nguyen.huu.anh.183794" },
-  { name: "Phạm Đỗ Bảo Trí", role: "Thành viên", holy: "Vincente", birth: "2003", school: "Đại học Yersin", major: "CN kỹ thuật ô tô", join: "2021", avatar: "tri.jpg", fb: "https://www.facebook.com/pham.tri.881198" },
-  { name: "Nguyễn Duy Khôi", role: "Thành viên", holy: "Đaminh", birth: "2007", school: "Đại Học Đà Lạt", major: "Công nghệ sinh học", join: "2025", avatar: "khoi.jpg", fb: "https://www.facebook.com/nguyen.duy.khoi.10808" },
-  { name: "Phan Nguyễn Thiên Phúc", role: "Thành Viên", holy: "GioanBaotixita", birth: "2007", school: "Đại Học Đà Lạt", major: "CN kỹ thuật môi trường", join: "2025", avatar: "phuc.jpg", fb: "https://www.facebook.com/Spinipop" },
-  { name: "Nguyễn Chánh Hoàng Quân", role: "Hàng Xóm", holy: "Phanxico Xavie", birth: "2006", school: "Cao Đẳng Đà Lạt", major: "Ngôn Ngữ Anh", join: "2025", avatar: "quan.jpg" },
-  { name: "Lê Hoàng Thiên Phúc", role: "Cựu", holy: "Đaminh Savio", birth: "2004", school: "Đại học Yersin", major: "Tâm Lý Học", join: "2025", avatar: "mini.jpg", fb: "https://www.facebook.com/phucmini01082004" },
-  { name: "Lê Vĩnh Thành", role: "Cựu", holy: "Toma", birth: "2002", school: "Đại Học Đà Lạt", major: "Ngôn Ngữ Anh", join: "2020", avatar: "thanh.jpg", fb: "https://web.facebook.com/LeVinhThanh11" },
-  { name: "K Thuyền", role: "Cựu", holy: "Giuse", birth: "2005", school: "Đại Học Đà Lạt", major: "Khoa học dữ liệu", join: "2024", avatar: "thuyen.jpg" },
-  { name: "Vũ Trần Hoàng Bảo", role: "Cựu", holy: "Đaminh", birth: "2006", school: "Đại Học Đà Lạt", major: "Ngôn ngữ anh", join: "2024", avatar: "bao.jpg" },
-  { name: "Phạm Trần Tuấn Anh", role: "Cựu", holy: "Giuse", birth: "2005", school: "Đại Học Đà Lạt", major: "Luật dân sự", join: "2023", avatar: "tuananh.jpg" },
-  { name: "Rmah Long", role: "Cựu", holy: "Giuse", birth: "2000", school: "Đại Học Đà Lạt", major: "Giáo dục tiểu học", join: "2023", avatar: "long.jpg" },
-  { name: "Trần Thiên", role: "Cựu", holy: "", birth: "2001", school: "Đại Học Đà Lạt", major: "Công nghệ thông tin", join: "2019", avatar: "thien.jpg" },
-  { name: "Roda K Hiệp", role: "Cựu", holy: "Giuse", birth: "2002", school: "Đại Học Đà Lạt", major: "Nông Học", join: "2020", avatar: "hiep.jpg" }
-];
-
-const PRE_DATA_ACTS = [
-  { title: "NỘP ĐƠN GIA NHẬP LXBC", sum: "Đăng ký để trở thành thành viên chính thức.", tag: "Hướng dẫn", year: "", img: "nopdon.jpg", link: "https://docs.google.com/forms/d/1CZDA4neWpuzDb2Yt9v54WbPFIqpkLmxR-Hod9oaFlFQ/edit?hl=vi", hotVal: 1, cta: "Nộp Đơn" },
-  { title: "TKB-LXBC", sum: "Xem thời khóa biểu sinh hoạt chung của nhà.", tag: "Dịch vụ", year: "", img: "tkb.jpg", link: "https://lxbc.netlify.app/tkb", hotVal: 999, cta: "ĐẾN TKB ẢO" }
-];
 
 /* ================= INIT ================= */
 (async () => {
