@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<title>LXBC - Mùa Đông Chiều Sâu 3D</title>
+<meta name="description" content="Trang web tĩnh: theme Vàng-Đen, hiệu ứng tuyết rơi chiều sâu 3D (trước/sau nội dung)." />
+<meta name="theme-color" content="#0b0b0b" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap&subset=vietnamese" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+
+<style>
+/* ===== VARIABLES & RESET ===== */
+:root {
+  --bg: #0b0b0b;
+  --card: #121315;
+  --text: #f5f5f5;
+  --muted: #9ca3af;
+  --border: #27272a;
+  --brand: #ffc800; /* VÀNG GOLD CHỦ ĐẠO */
+  
+  /* Hiệu ứng băng giá */
+  --frost-blue: 137, 207, 240;
+  --frost-glow: 0 5px 25px rgba(var(--frost-blue), 0.45); 
+  --frost-border: 1px solid rgba(var(--frost-blue), 0.35); 
+
+  --safe-top: env(safe-area-inset-top);
+  --font-ui: 'Be Vietnam Pro', sans-serif;
+  --radius: 12px;
+}
+*,*::before,*::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui); line-height: 1.5; -webkit-tap-highlight-color: transparent; overflow-x: hidden; position: relative; }
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+
+/* ===== TUYẾT RƠI CHIỀU SÂU (2 LỚP CANVAS) ===== */
+/* Style chung cho cả 2 lớp canvas */
+.snow-canvas {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; /* Không chặn click chuột */
+}
+
+/* Lớp Hậu Cảnh (Rơi SAU các thẻ, nút) */
+#snowBack {
+    z-index: -1; /* Nằm sau nội dung chính */
+    opacity: 0.7; /* Mờ hơn chút */
+    filter: blur(1px); /* Hơi nhòe để tạo cảm giác xa */
+}
+
+/* Lớp Tiền Cảnh (Rơi TRƯỚC tất cả) */
+#snowFront {
+    z-index: 9999; /* Nằm trên cùng */
+    opacity: 0.95; /* Rõ nét */
+}
+
+
+/* ===== UI COMPONENTS ===== */
+/* Navbar */
+.nav { 
+  position: sticky; top: 0; z-index: 1000; 
+  background: rgba(11, 11, 11, 0.85);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: var(--frost-border);
+  transition: transform 0.3s; will-change: transform;
+  box-shadow: 0 4px 15px rgba(var(--frost-blue), 0.15);
+}
+.nav-inner { display: flex; align-items: center; justify-content: space-between; height: calc(56px + var(--safe-top)); padding-top: var(--safe-top); position: relative; }
+
+/* Brand Logo */
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; letter-spacing: -0.5px; }
+.brand-logo { 
+  width: 32px; height: 32px; border-radius: 8px; 
+  border: 1px solid #333;
+  box-shadow: 0 0 15px rgba(var(--frost-blue), 0.4);
+}
+.brand span::after { content: ' 🎄'; font-size: 1.1em; margin-left: 4px; filter: brightness(1.2); opacity: 1; }
+
+.nav-links { display: flex; gap: 8px; }
+
+/* CHIP BUTTONS */
+.chip { 
+  padding: 6px 16px; border-radius: 99px; font-size: 0.85rem; font-weight: 600; 
+  background: rgba(255,255,255,0.05); color: #ccc; 
+  cursor: pointer; transition: all 0.3s ease; 
+  border: 1px solid var(--border);
+}
+.chip:hover { 
+  background: rgba(11, 11, 11, 0.9); color: var(--brand); border-color: var(--brand);
+  box-shadow: var(--frost-glow); 
+}
+
+/* Sections */
+/* Quan trọng: background trong suốt để thấy tuyết lớp sau */
+.section { padding: 48px 0; border-bottom: 1px solid var(--border); content-visibility: auto; contain-intrinsic-size: 500px; background: transparent; }
+.section h2 { font-size: clamp(24px, 4vw, 36px); margin: 0 0 20px; font-weight: 800; letter-spacing: -1px; color: var(--text); }
+
+/* Motto */
+.motto-frame {
+  display: inline-block; padding: 8px 24px; margin-bottom: 24px; position: relative; overflow: hidden;
+  background: linear-gradient(180deg, rgba(30, 30, 30, 0.9), rgba(10, 10, 10, 0.9));
+  border: 1px solid rgba(255, 200, 0, 0.6);
+  border-radius: 99px;
+  box-shadow: inset 0 0 15px rgba(0,0,0,1), 0 5px 20px rgba(var(--frost-blue), 0.25);
+  color: var(--brand); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; 
+  font-size: clamp(0.85rem, 3vw, 1.1rem); text-shadow: 0 2px 10px rgba(255, 200, 0, 0.3);
+  z-index: 2; /* Đảm bảo nằm trên tuyết hậu cảnh */
+}
+.motto-frame::after {
+  content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; opacity: 0;
+  transform: skewX(-20deg); 
+  background: linear-gradient(to right, transparent 0%, rgba(255, 255, 255, 0.3) 30%, rgba(255, 200, 0, 0.5) 50%, transparent 100%);
+  animation: goldSheen 10s ease-in-out infinite;
+}
+@keyframes goldSheen { 0% { left: -100%; opacity: 0; } 5% { opacity: 1; } 20% { left: 200%; opacity: 0; } 100% { left: 200%; opacity: 0; } }
+
+.sub-head { font-size: 1.1rem; margin: 32px 0 16px; color: var(--brand); font-weight: 700; border-left: 4px solid var(--brand); padding-left: 12px; }
+
+/* BUTTONS */
+.btn-more, .intro-readmore, .btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 10px 28px; border-radius: 99px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--brand);
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.85rem; text-decoration: none;
+  z-index: 2; /* Nằm trên tuyết hậu cảnh */
+  position: relative;
+}
+.btn-more:hover, .intro-readmore:hover, .btn:hover {
+  background: var(--brand);
+  border-color: var(--brand); color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 200, 0, 0.4), 0 0 25px rgba(var(--frost-blue), 0.4);
+}
+.btn-more:active, .intro-readmore:active, .btn:active { transform: scale(0.96); }
+
+.intro-text { margin: 0 auto; color: #d1d5db; max-width: 700px; font-size: 1rem; line-height: 1.7; text-align: justify; text-indent: 2em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; position: relative; z-index: 2; }
+.intro-text.expanded { -webkit-line-clamp: unset; }
+.intro-readmore { margin-top: 24px; } 
+
+/* Search & Filters */
+.filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; height: 44px; position: relative; z-index: 5; }
+.search-wrap { position: relative; width: 44px; height: 44px; z-index: 90; transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1); flex-shrink: 0; }
+.search-trigger { position: absolute; inset: 0; border-radius: 99px; background: #202023; border: 1px solid var(--border); color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+.search-trigger:hover { color: var(--brand); border-color: var(--brand); box-shadow: var(--frost-glow); }
+.search-input { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent; border: none; color: transparent; padding: 0; pointer-events: none; opacity: 0; border-radius: 99px; font-family: inherit; transition: 0.2s; }
+.search-wrap.open { width: 100%; max-width: 300px; }
+.search-wrap.open .search-trigger { opacity: 0; pointer-events: none; transform: scale(0.8); }
+.search-wrap.open .search-input { background: #18181b; border: 1px solid var(--brand); color: #fff; padding: 0 16px; opacity: 1; pointer-events: auto; box-shadow: 0 4px 20px rgba(255, 200, 0, 0.3), var(--frost-glow); }
+.quick-filters { display: flex; gap: 8px; overflow-x: auto; flex: 1; scrollbar-width: none; padding-right: 16px; align-items: center; -webkit-overflow-scrolling: touch; }
+.quick-filters::-webkit-scrollbar { display: none; }
+.q-btn { white-space: nowrap; padding: 0 16px; height: 44px; border-radius: 99px; border: 1px solid var(--border); background: #17191b; color: #9ca3af; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+.q-btn:hover { background: #222; color: #fff; border-color: rgba(var(--frost-blue), 0.6); }
+.q-btn.active { background: rgba(255,200,0,0.15); border-color: var(--brand); color: var(--brand); box-shadow: var(--frost-glow); }
+
+/* ===== MEMBERS GRID ===== */
+.team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; position: relative; z-index: 2; }
+@media (min-width: 600px) { .team-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; } }
+
+.hidden-item { display: none !important; }
+
+.member-card { 
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; 
+  position: relative; cursor: pointer; contain: paint;
+  transform: translateZ(0); backface-visibility: hidden; will-change: transform;
+  transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+  /* Card là khối đặc nên sẽ che tuyết hậu cảnh */
+}
+.member-card:hover { 
+  transform: translateY(-4px); 
+  border-color: rgba(var(--frost-blue), 0.5);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4), var(--frost-glow);
+}
+
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.member-photo { 
+  aspect-ratio: 3/4; overflow: hidden; 
+  background: #1a1a1a; 
+  background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+.member-photo img { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.3s; }
+
+.member-info { padding: 8px 4px; text-align: center; position: absolute; bottom: 0; inset-inline: 0; background: linear-gradient(to top, rgba(0,0,0,0.95) 20%, transparent); }
+.m-name { font-weight: 700; font-size: 0.8rem; color: #fff; margin-bottom: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-role { font-size: 0.65rem; color: var(--brand); font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+@media (min-width: 600px) {
+  .member-info { padding: 12px 8px; }
+  .m-name { font-size: 0.9rem; }
+  .m-role { font-size: 0.75rem; }
+}
+
+/* ===== ACTIVITY CARD ===== */
+#actGrid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); position: relative; z-index: 2; }
+.act-card { 
+  height: 250px; border-radius: 16px; position: relative; overflow: hidden; border: 1px solid var(--border); 
+  background: #000; contain: paint;
+  transform: translateZ(0); backface-visibility: hidden; will-change: transform;
+  transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s; 
+  /* Card là khối đặc nên sẽ che tuyết hậu cảnh */
+}
+.act-card:hover { 
+  transform: translateY(-4px); 
+  border-color: rgba(var(--frost-blue), 0.5);
+  box-shadow: var(--frost-glow);
+}
+.act-bg { position: absolute; inset: 0; z-index: 0; background: #1a1a1a; }
+.act-bg img { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; filter: brightness(0.8); transition: transform 0.6s; }
+.act-card:hover .act-bg img { transform: scale(1.05); }
+.act-content { 
+  position: absolute; inset: 0; z-index: 2; 
+  padding: 16px; display: flex; flex-direction: column; justify-content: flex-end; 
+  background: linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.95) 100%); 
+}
+.ribbon { position: absolute; top: 12px; right: -32px; transform: rotate(45deg); background: var(--brand); color: #000; font-size: 0.65rem; font-weight: 800; padding: 4px 34px; z-index: 10; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+.act-title { font-size: 1.15rem; font-weight: 800; margin: 0 0 6px; line-height: 1.3; color: #fff; }
+.act-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.act-chip { font-size: 0.7rem; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.15); backdrop-filter: blur(4px); color: #eee; font-weight: 600; }
+.act-sum { 
+  font-size: 0.85rem; color: #d1d5db; line-height: 1.4; margin-bottom: 12px; 
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; 
+}
+/* Nút hoạt động */
+.act-btn { 
+  align-self: flex-start; background: var(--brand); color: #000; 
+  padding: 8px 20px; border-radius: 99px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+  transition: 0.2s; border: none;
+}
+.act-btn:hover { 
+  background: #fff; color: #000; transform: translateY(-2px); 
+  box-shadow: 0 4px 12px rgba(255, 200, 0, 0.5), var(--frost-glow); 
+}
+
+/* Modals */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; /* Z-index cao hơn tuyết tiền cảnh */ display: none; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.modal.open { display: flex; opacity: 1; pointer-events: auto; }
+.modal-box { background: #111; border: 1px solid #333; width: 100%; max-width: 420px; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); display: flex; flex-direction: column; max-height: 90vh; transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.modal.open .modal-box { transform: scale(1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8), var(--frost-glow); }
+.modal-header { padding: 14px 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; background: #161616; }
+.modal-title { font-weight: 700; font-size: 1.05rem; }
+.close-btn { background: none; border: none; color: #888; font-size: 1.5rem; cursor: pointer; padding: 0 4px; transition: color 0.2s; }
+.close-btn:hover { color: #fff; }
+.modal-content { padding: 24px; overflow-y: auto; }
+.m-detail-grid { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.m-big-avt { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; border: 4px solid #222; box-shadow: 0 8px 30px rgba(0,0,0,0.5), var(--frost-glow); }
+.m-info-list { width: 100%; text-align: center; }
+.info-row { margin-bottom: 8px; font-size: 0.95rem; }
+.info-lbl { color: #888; font-size: 0.85rem; font-weight: 500; margin-right: 6px; }
+.info-lbl::after { content: ":"; }
+.info-val { color: #fff; font-weight: 600; }
+.contact-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+.c-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; font-weight: 600; font-size: 0.9rem; background: #222; color: #fff; transition: 0.2s; border: 1px solid rgba(255,255,255,0.05); }
+.c-btn:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: var(--frost-glow); }
+.c-btn.facebook { background: #1877F2; }
+.c-btn.zalo { background: #0068FF; }
+.c-btn.phone { background: #34A853; }
+.c-btn.email { background: #EA4335; }
+.c-btn.instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); border: none; }
+.c-btn.locket { background: #FFAD1F; color: #000; }
+
+/* Slider */
+.hero-slider { position: relative; aspect-ratio: 16/9; max-height: 450px; overflow: hidden; background: #000; z-index: 1; }
+@media(min-width: 768px) { .hero-slider { aspect-ratio: 21/9; } }
+.slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s, transform 1.5s; transform: scale(1.08); will-change: opacity, transform; }
+.slide.active { opacity: 1; transform: scale(1); }
+.slide img { width: 100%; height: 100%; object-fit: cover; }
+.dots { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 10; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; transition: 0.3s; }
+.dot.active { background: var(--brand); transform: scale(1.4); box-shadow: 0 0 10px rgba(var(--frost-blue), 0.7); }
+
+/* Misc */
+.more-container { display: flex; justify-content: center; margin-top: 24px; position: relative; z-index: 2; }
+.dropzone { display: flex; gap: 10px; margin-bottom: 20px; padding: 20px; border: 1px dashed #444; border-radius: 16px; justify-content: center; background: #111; position: relative; z-index: 2; }
+footer { border-top: 1px solid var(--border); background: #050505; position: relative; z-index: 2; }
+.contact-info p { margin-bottom: 12px; font-size: 0.95rem; color: #ccc; }
+.contact-info strong { color: var(--brand); }
+</style>
+</head>
+<body>
+
+<canvas id="snowBack" class="snow-canvas"></canvas> <canvas id="snowFront" class="snow-canvas"></canvas> <nav class="nav">
+  <div class="container nav-inner">
+    <a href="#" class="brand">
+      <img src="image/logo.jpg" class="brand-logo" alt="Logo" onerror="this.src='https://via.placeholder.com/40/333/fff?text=L'">
+      <span>Lưu Xá <span style="color:var(--brand)">Bosco</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="https://www.facebook.com/SinhVienDonboscoSOB" target="_blank" class="chip">SOB</a>
+      <button id="btnOpenContact" class="chip">Liên hệ</button>
+    </div>
+  </div>
+</nav>
+
+<section id="banner" style="border:none;padding:0">
+  <div class="hero-slider">
+    <div class="slide active"><img src="image/banner1.jpg" alt="Banner 1" fetchpriority="high" loading="eager"></div>
+    <div class="slide"><img src="image/banner2.jpg" alt="Banner 2" loading="lazy"></div>
+    <div class="slide"><img src="image/banner3.jpg" alt="Banner 3" loading="lazy"></div>
+    <div class="dots" id="dots"></div>
+  </div>
+</section>
+
+<section id="gioi-thieu" class="section">
+  <div class="container" style="text-align:center">
+    <div class="motto-frame">Chân Tình • Hết Mình</div>
+    <div class="intro-text" id="introContent">
+      Lưu xá Bosco là ngôi nhà chung của anh em sinh viên, nơi cùng nhau sống, học tập và trưởng thành. Tinh thần Don Bosco luôn hiện diện trong từng hoạt động, từ những bữa cơm thân mật, những giờ kinh nguyện chung cho đến những buổi sinh hoạt thể thao sôi nổi. Tại đây, mỗi thành viên được khuyến khích phát triển toàn diện bản thân, không chỉ về tri thức mà còn về nhân cách và đời sống đức tin. Chúng tôi cùng nhau xây dựng một cộng đồng yêu thương, sẻ chia và giúp đỡ lẫn nhau vượt qua những khó khăn của đời sống sinh viên xa nhà, hướng tới một tương lai tươi sáng và tốt đẹp hơn.
+    </div>
+    <button id="btnIntroMore" class="intro-readmore">Xem thêm</button>
+  </div>
+</section>
+
+<section id="thanh-vien" class="section">
+  <div class="container">
+    <h2>Thành viên</h2>
+    <div class="dropzone" id="drop" style="display:none">
+      <input id="excelFile" type="file" accept=".xlsx,.xls,.csv" class="btn" style="padding:6px" />
+      <button class="btn" id="btnLoad">Tải Dữ Liệu</button>
+    </div>
+    <div class="filter-row">
+      <div class="search-wrap" id="searchWrap">
+        <div class="search-trigger" id="searchTrigger"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
+        <input type="text" id="searchInput" class="search-input" placeholder="Nhập tên thành viên..." autocomplete="off">
+      </div>
+      <div class="quick-filters">
+        <button class="q-btn" onclick="setMode('bdh')" id="btnQ_BDH">Điều Hành Nhà</button>
+        <button class="q-btn" onclick="setMode('cuu')" id="btnQ_Cuu">Cựu Thành Viên</button>
+        <button class="q-btn" onclick="setMode('pet')" id="btnQ_Pet">Pet</button>
+        <button class="q-btn" onclick="setMode('tt')" id="btnQ_TT">Thường trực</button>
+        <button class="q-btn" id="btnOrg">Sơ Đồ</button>
+      </div>
+    </div>
+    
+    <div id="all-members-grid" class="team-grid"></div>
+    
+    <div class="more-container"><button class="btn-more" id="btnMore" style="display:none">Xem thêm</button></div>
+  </div>
+</section>
+
+<section id="hoat-dong" class="section">
+  <div class="container">
+    <h2>Hoạt động</h2>
+    <div class="filter-row">
+      <div class="search-wrap" id="actSearchWrap">
+        <div class="search-trigger" id="actSearchTrigger"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
+        <input type="text" id="actSearchInput" class="search-input" placeholder="Tìm hoạt động..." autocomplete="off">
+      </div>
+      <div class="quick-filters" id="actFilters"></div>
+    </div>
+    <div id="actGrid"></div>
+    <div class="more-container"><button class="btn-more" id="btnActMore">Xem thêm</button></div>
+  </div>
+</section>
+
+<div id="modal" class="modal">
+  <div class="modal-box">
+    <div class="modal-header"><div class="modal-title">Hồ sơ thành viên</div><button class="close-btn" onclick="closeModal('modal')">×</button></div>
+    <div class="modal-content">
+      <div class="m-detail-grid">
+        <img id="m-avatar" class="m-big-avt" src="image/logo.jpg">
+        <div class="m-info-list">
+          <div class="info-row"><span class="info-lbl">Tên thánh</span> <span class="info-val" id="m-holy"></span></div>
+          <div class="info-row"><span class="info-lbl">Họ tên</span> <span class="info-val" id="m-name"></span></div>
+          <div class="info-row"><span class="info-lbl">Chức vụ</span> <span class="info-val" id="m-role"></span></div>
+          <div class="info-row"><span class="info-lbl">Năm sinh</span> <span class="info-val" id="m-birth"></span></div>
+          <div class="info-row"><span class="info-lbl">Ngành học</span> <span class="info-val" id="m-major"></span></div>
+          <div class="info-row"><span class="info-lbl">Trường học</span> <span class="info-val" id="m-school"></span></div>
+          <div class="info-row"><span class="info-lbl">Gia nhập</span> <span class="info-val" id="m-join"></span></div>
+          <div id="m-bio" style="margin-top:16px;color:#999;font-size:0.9rem;line-height:1.6;font-style:italic"></div>
+          <div id="m-contact-btns" class="contact-actions"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="orgModal" class="modal">
+  <div class="modal-box" style="max-width:800px">
+    <div class="modal-header"><div class="modal-title">Sơ đồ các thế hệ</div><button class="close-btn" onclick="closeModal('orgModal')">×</button></div>
+    <div class="modal-content" id="orgBody"></div>
+  </div>
+</div>
+
+<div id="contactModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-header"><div class="modal-title">Thông tin liên hệ</div><button class="close-btn" onclick="closeModal('contactModal')">×</button></div>
+    <div class="modal-content contact-info">
+      <p><strong>Cha Đặc Trách:</strong> Phaolo Nguyễn Toàn Khoa</p>
+      <p><strong>Điện thoại:</strong> <a href="tel:0909831284" >0909 831 284</a></p>
+      <hr style="border-color:#333;margin:16px 0">
+      <p><strong>Trưởng nhà:</strong> <span id="c-leader-name">Đang cập nhật...</span></p>
+      <p><strong>Điện thoại:</strong> <a id="c-leader-phone" href="#">—</a></p>
+      <hr style="border-color:#333;margin:16px 0">
+      <p><strong>Địa chỉ:</strong> Số 161, Bùi Thị Xuân, Phường 2, TP. Đà Lạt.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="container" style="padding:40px 0;text-align:center;color:#555;font-size:0.85rem">
+    © <span id="year"></span> WEB LXBC-DEVELOPPED BY HOWL.
+  </div>
+</footer>
+
+<script>
+/* ================= SYSTEM CORE ================= */
+const $ = document.querySelector.bind(document);
+const $$ = document.querySelectorAll.bind(document);
+const rmAccent = (s) => String(s||'').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+const FOLDER_MEM = 'anh_thanh_vien';
+const FOLDER_ACT = 'anh_hoat_dong';
+const DEFAULT_AVATAR = 'image/logo.jpg';
+
+function debounce(func, timeout = 200){
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { func.apply(this, args); }, timeout);
+  };
+}
+
+const normalizeImg = (u, folder) => {
+  u = String(u || '').trim();
+  if (!u) return '';
+  if (u.match(/^(http|https|data):/i)) {
+    if(u.includes('drive.google.com')) {
+      const m = u.match(/\/d\/([^/]+)/);
+      return m ? `https://drive.google.com/uc?export=view&id=${m[1]}` : u;
+    }
+    return u;
+  }
+  u = u.replace(/\\/g, '/');
+  const prefix = folder + '/';
+  if (u.toLowerCase().startsWith(prefix.toLowerCase())) u = u.substring(prefix.length);
+  return folder ? `${folder}/${u}` : u;
+};
+
+/* ================= SNOW EFFECT LOGIC (DUAL LAYERS FOR DEPTH) ================= */
+(function() {
+  // Lấy context của cả 2 canvas
+  const canvasBack = document.getElementById('snowBack');
+  const ctxBack = canvasBack.getContext('2d');
+  const canvasFront = document.getElementById('snowFront');
+  const ctxFront = canvasFront.getContext('2d');
+
+  let width, height;
+  const flakesBack = []; // Mảng tuyết lớp sau
+  const flakesFront = []; // Mảng tuyết lớp trước
+
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvasBack.width = width;
+    canvasBack.height = height;
+    canvasFront.width = width;
+    canvasFront.height = height;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function createFlakes() {
+    // Giới hạn số lượng tuyết để không bị rối và lag (tổng khoảng 60 bông)
+    const maxFlakesTotal = width < 600 ? 30 : 60; 
+
+    if (flakesBack.length + flakesFront.length < maxFlakesTotal) {
+      // Ngẫu nhiên chọn loại tuyết và lớp (trước/sau)
+      const type = Math.random() > 0.5 ? '❄️' : '•';
+      const isFront = Math.random() > 0.6; // 40% cơ hội ra lớp trước
+      
+      const flake = {
+        x: Math.random() * width,
+        y: -20, // Bắt đầu từ trên đỉnh màn hình
+        t: type, // Loại icon
+        // Cấu hình dựa trên lớp
+        r: isFront ? (Math.random() * 10 + 15) : (Math.random() * 8 + 8), // Lớp trước to hơn (15-25px), sau nhỏ hơn (8-16px)
+        d: isFront ? (Math.random() * 0.5 + 0.8) : (Math.random() * 0.3 + 0.3), // Lớp trước rơi nhanh hơn
+        o: isFront ? (Math.random() * 0.3 + 0.7) : (Math.random() * 0.3 + 0.4)  // Lớp trước đậm hơn
+      };
+
+      if (isFront) flakesFront.push(flake); else flakesBack.push(flake);
+    }
+  }
+
+  // Hàm vẽ chung cho một mảng tuyết lên một context
+  function drawLayer(ctx, flakes) {
+    ctx.clearRect(0, 0, width, height);
+    for (let i = 0; i < flakes.length; i++) {
+      const f = flakes[i];
+      ctx.fillStyle = "rgba(255, 255, 255, " + f.o + ")";
+      ctx.font = f.r + "px sans-serif";
+      ctx.fillText(f.t, f.x, f.y); 
+    }
+  }
+
+  // Hàm di chuyển chung cho một mảng tuyết
+  function moveLayer(flakes) {
+    for (let i = 0; i < flakes.length; i++) {
+      const f = flakes[i];
+      f.y += f.d;
+      f.x += Math.sin(f.y * 0.01) * 0.2; // Bay lắc nhẹ
+
+      // Reset khi rơi xuống đáy hoặc bay quá xa
+      if (f.y > height + 20) {
+         // Tái sử dụng bông tuyết bằng cách đưa lên trên cùng
+         f.y = -20; 
+         f.x = Math.random() * width;
+      }
+      if (f.x > width + 20) f.x = -20;
+      if (f.x < -20) f.x = width + 20;
+    }
+  }
+
+  // Tăng thời gian interval để tuyết rơi "thưa" hơn (150ms tạo 1 lần)
+  setInterval(createFlakes, 150); 
+
+  function loop() {
+    // Vẽ và di chuyển lớp sau
+    drawLayer(ctxBack, flakesBack);
+    moveLayer(flakesBack);
+
+    // Vẽ và di chuyển lớp trước
+    drawLayer(ctxFront, flakesFront);
+    moveLayer(flakesFront);
+
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ================= DATA & STATE ================= */
+let MEMBERS = [], ACTS = [];
+let showAllMem = false, activeFilterMode = 'default';
+let activeActTag = null, showAllActs = false;
+
+/* ================= INTRO ================= */
+$('#btnIntroMore').onclick = () => {
+  const c = $('#introContent');
+  const b = $('#btnIntroMore');
+  c.classList.toggle('expanded');
+  b.textContent = c.classList.contains('expanded') ? 'Thu gọn' : 'Xem thêm';
+};
+
+/* ================= SEARCH & FILTER UI ================= */
+const setupSearch = (wrapId, inpId, trigId, callback) => {
+  const wrap = $(wrapId), inp = $(inpId), trig = $(trigId);
+  if(!wrap) return;
+  trig.onclick = (e) => { e.stopPropagation(); wrap.classList.add('open'); inp.focus(); };
+  document.addEventListener('click', (e) => { if(!wrap.contains(e.target) && inp.value.trim()==='') wrap.classList.remove('open'); });
+  inp.addEventListener('input', debounce(() => callback(), 300));
+};
+
+setupSearch('#searchWrap', '#searchInput', '#searchTrigger', () => applyFilter());
+setupSearch('#actSearchWrap', '#actSearchInput', '#actSearchTrigger', () => renderActs());
+
+window.setMode = (mode) => {
+  activeFilterMode = (activeFilterMode === mode) ? 'default' : mode;
+  showAllMem = false;
+  const btns = { 'bdh': '#btnQ_BDH', 'tt': '#btnQ_TT', 'pet': '#btnQ_Pet', 'cuu': '#btnQ_Cuu' };
+  for (const [k, v] of Object.entries(btns)) {
+    $(v).classList.toggle('active', activeFilterMode === k);
+  }
+  applyFilter();
+}
+
+/* ================= MODALS ================= */
+const modal = $('#modal'), contactModal = $('#contactModal'), orgModal = $('#orgModal');
+window.closeModal = (id) => $(`#${id}`).classList.remove('open');
+$('#btnOpenContact').onclick = () => contactModal.classList.add('open');
+$('#btnOrg').onclick = () => { buildTimeline(); orgModal.classList.add('open'); };
+[modal, contactModal, orgModal].forEach(m => {
+  m.onclick = (e) => { if(e.target === m) m.classList.remove('open'); }
+});
+
+/* ================= MEMBER LOGIC ================= */
+const roleRank = { 'truong nha':1, 'quan ly':2, 'giam linh':3, 'hoi truc':4, 'it':5 };
+const getRank = (r) => roleRank[rmAccent(r)] || 99;
+const isCuu = (r) => /\b(cuu|alumni|former)\b/i.test(rmAccent(r));
+const isBDH = (r) => /\b(giam linh|truong nha|quan ly|hoi truc|it|i\.t)\b/i.test(rmAccent(r));
+const isPet = (r) => /\b(pet|ctv|thu cung)\b/i.test(rmAccent(r));
+const isTT = (r) => /\b(thuong truc|hang xom)\b/i.test(rmAccent(r));
+
+// Helper: Phân loại group cho thành viên
+function getGroup(role) {
+  if (isBDH(role)) return 'bdh';
+  if (isTT(role)) return 'tt';
+  if (isPet(role)) return 'pet';
+  if (isCuu(role)) return 'cuu';
+  return 'mem';
+}
+
+function parseMembers(data) {
+  let raw = [];
+  if(Array.isArray(data)){
+    raw = data;
+  } else {
+    const wb = XLSX.read(data, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    const [h, ...rows] = json;
+    const map = {};
+    h.forEach((col, i) => {
+      const k = rmAccent(col);
+      if (k.includes('ten thanh') || k.includes('bon mang')) map.holy = i;
+      else if (k.includes('nganh') || k.includes('major')) map.major = i;
+      else if (k.includes('ten') && !k.includes('thanh')) map.name = i;
+      else if (k.includes('chuc') || k.includes('role')) map.role = i;
+      else if (k.includes('anh') || k.includes('avatar')) map.avatar = i;
+      else if (k.includes('sinh') || k.includes('birth')) map.birth = i;
+      else if (k.includes('nhap') || k.includes('join')) map.join = i;
+      else if (k.includes('truong') || k.includes('school')) map.school = i;
+      else if (k.includes('phone') || k.includes('sdt')) map.phone = i;
+      else if (k.includes('fb') || k.includes('facebook')) map.fb = i;
+      else if (k.includes('zalo')) map.zalo = i;
+      else if (k.includes('bio') || k.includes('gioi thieu')) map.bio = i;
+      else if (k.includes('email')) map.email = i;
+      else if (k.includes('insta')) map.insta = i;
+      else if (k.includes('locket')) map.locket = i;
+    });
+    raw = rows.map(r => ({
+      name: r[map.name], 
+      role: String(r[map.role] || 'Thành viên'),
+      avatarRaw: r[map.avatar], // Lưu raw để xử lý sau
+      holy: r[map.holy], birth: r[map.birth], join: r[map.join], school: r[map.school], major: r[map.major],
+      phone: r[map.phone], fb: r[map.fb], zalo: r[map.zalo], bio: r[map.bio], email: r[map.email], insta: r[map.insta], locket: r[map.locket]
+    })).filter(m => m.name);
+  }
+
+  // Xử lý ảnh và sắp xếp 1 lần duy nhất
+  MEMBERS = raw.map(m => {
+    // Nếu không có ảnh -> gán logo.jpg ngay lập tức
+    const url = normalizeImg(m.avatarRaw || m.avatar, FOLDER_MEM);
+    return { 
+      ...m, 
+      avatar: url ? url : DEFAULT_AVATAR,
+      group: getGroup(m.role) 
+    };
+  });
+  
+  // Sắp xếp: BĐH lên đầu
+  MEMBERS.sort((a,b) => {
+    const ga = a.group === 'bdh' ? 0 : 1;
+    const gb = b.group === 'bdh' ? 0 : 1;
+    if(ga !== gb) return ga - gb;
+    if(a.group === 'bdh') return getRank(a.role) - getRank(b.role);
+    return 0;
+  });
+
+  updateContactInfo();
+  renderAllMembersOnce(); // Render hết ra DOM
+  applyFilter(); // Ẩn hiện theo logic
+}
+
+function updateContactInfo() {
+  const leader = MEMBERS.find(m => {
+    const r = rmAccent(m.role);
+    return r.includes('truong nha') || r.includes('leader');
+  });
+  const nameEl = document.getElementById('c-leader-name');
+  const phoneEl = document.getElementById('c-leader-phone');
+  if(leader) {
+    if(nameEl) nameEl.textContent = leader.name;
+    if(phoneEl) {
+      const p = leader.phone || '';
+      phoneEl.textContent = p ? p : 'Chưa cập nhật SĐT';
+      phoneEl.href = p ? `tel:${p.replace(/\s/g,'')}` : '#';
+    }
+  } else {
+    if(nameEl) nameEl.textContent = "Chưa có thông tin";
+  }
+}
+
+// === LOGIC MỚI: RENDER 1 LẦN DUY NHẤT ===
+function renderAllMembersOnce() {
+  const container = $('#all-members-grid');
+  // Render tất cả thành viên vào DOM. Dùng loading="lazy" và decoding="async"
+  // Thêm onerror để backup nếu link ảnh chết
+  container.innerHTML = MEMBERS.map((m, index) => `
+    <div class="member-card" data-idx="${index}" data-name="${rmAccent(m.name)}" data-role="${rmAccent(m.role)}" data-group="${m.group}" onclick="openMemberModal(${index})">
+      <div class="member-photo">
+        <img src="${m.avatar}" loading="lazy" decoding="async" alt="${m.name}" 
+             onerror="this.onerror=null;this.src='${DEFAULT_AVATAR}'">
+      </div>
+      <div class="member-info"><div class="m-name">${m.name}</div><div class="m-role">${m.role}</div></div>
+    </div>
+  `).join('');
+}
+
+function getLimit() {
+  const w = window.innerWidth;
+  if (w < 600) return 6; 
+  const cols = Math.floor((Math.min(w, 1200) - 32) / 180); 
+  let limit = cols * 2;
+  return limit < 8 ? 8 : limit;
+}
+
+// === LOGIC MỚI: CHỈ ẨN/HIỆN THẺ DIV CÓ SẴN ===
+function applyFilter() {
+  const term = rmAccent($('#searchInput').value);
+  const container = $('#all-members-grid');
+  const items = container.children;
+  const limit = getLimit();
+  
+  let visibleCount = 0;
+  let matchCount = 0;
+
+  for (let i = 0; i < items.length; i++) {
+    const el = items[i];
+    const mName = el.getAttribute('data-name');
+    const mRole = el.getAttribute('data-role');
+    const mGroup = el.getAttribute('data-group');
+    
+    // 1. Kiểm tra Search
+    const matchSearch = !term || (mName + mRole).includes(term);
+    
+    // 2. Kiểm tra Mode Filter
+    let matchMode = false;
+    if (activeFilterMode === 'default') {
+      // Mặc định: Hiện BĐH + Mem (ẩn Cựu, Pet, Thường trực trừ khi search)
+      if (term) matchMode = true; // Khi search thì tìm trong tất cả
+      else matchMode = (mGroup === 'bdh' || mGroup === 'mem');
+    } else {
+      // Mode cụ thể
+      matchMode = (mGroup === activeFilterMode);
+    }
+
+    if (matchSearch && matchMode) {
+      matchCount++;
+      // 3. Kiểm tra Giới hạn hiển thị (Limit)
+      // Nếu là BĐH thì luôn hiện, nếu là Mem thì tính limit (ở chế độ default)
+      let shouldShow = true;
+      
+      if (activeFilterMode === 'default' && !term && !showAllMem) {
+        // Trong chế độ mặc định, nếu vượt quá limit thì ẩn
+        if (visibleCount >= limit) shouldShow = false;
+      }
+      
+      if (shouldShow) {
+        el.classList.remove('hidden-item');
+        visibleCount++;
+      } else {
+        el.classList.add('hidden-item');
+      }
+    } else {
+      el.classList.add('hidden-item');
+    }
+  }
+
+  // Cập nhật nút Xem thêm
+  const btnMore = $('#btnMore');
+  // Nếu ở chế độ default và tổng số khớp > số đã hiện -> Hiện nút
+  if (activeFilterMode === 'default' && !term && matchCount > limit) {
+    btnMore.style.display = 'inline-flex';
+    btnMore.textContent = showAllMem ? 'Thu gọn' : `Xem thêm (${matchCount - limit})`;
+  } else {
+    btnMore.style.display = 'none';
+  }
+}
+
+$('#btnMore').onclick = () => { showAllMem = !showAllMem; applyFilter(); };
+window.addEventListener('resize', debounce(() => { if(activeFilterMode === 'default') applyFilter(); }, 200));
+
+window.openMemberModal = (index) => {
+  const m = MEMBERS[index];
+  if(!m) return;
+  $('#m-avatar').src = m.avatar || DEFAULT_AVATAR;
+  $('#m-name').innerText = m.name;
+  $('#m-role').innerText = m.role;
+  $('#m-holy').innerText = m.holy || '—';
+  $('#m-birth').innerText = m.birth || '—';
+  $('#m-school').innerText = m.school || '—';
+  $('#m-major').innerText = m.major || '—';
+  $('#m-join').innerText = m.join || '—';
+  $('#m-bio').innerText = m.bio || '';
+  const links = [
+    {k:'fb', c:'facebook', t:'Facebook', l: m.fb},
+    {k:'zalo', c:'zalo', t:'Zalo', l: m.zalo},
+    {k:'insta', c:'instagram', t:'Instagram', l: m.insta},
+    {k:'locket', c:'locket', t:'Locket', l: m.locket},
+    {k:'phone', c:'phone', t:'Gọi điện', l: m.phone ? `tel:${m.phone}` : null},
+    {k:'email', c:'email', t:'Email', l: m.email ? `mailto:${m.email}` : null}
+  ];
+  $('#m-contact-btns').innerHTML = links.filter(x => x.l).map(x => `<a href="${x.l}" target="_blank" class="c-btn ${x.c}">${x.t}</a>`).join('');
+  modal.classList.add('open');
+}
+
+/* ================= ACTIVITY LOGIC ================= */
+function parseActs(data) {
+  if(Array.isArray(data)) {
+    ACTS = data.map(a => ({...a, img: normalizeImg(a.img, FOLDER_ACT)}));
+  } else {
+    const wb = XLSX.read(data, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    const [h, ...rows] = json;
+    const map = {};
+    h.forEach((col, i) => {
+      const k = rmAccent(col);
+      if(k.includes('tieu de')||k.includes('ten')) map.title=i;
+      else if(k.includes('tom tat')||k.includes('mo ta')) map.sum=i;
+      else if(k.includes('anh')||k.includes('img')) map.img=i;
+      else if(k.includes('link')||k.includes('url')) map.link=i;
+      else if(k.includes('hot')||k.includes('noi bat')) map.hot=i;
+      else if(k.includes('nam')) map.year=i;
+      else if(k.includes('tag')||k.includes('chu de')) map.tag=i;
+      else if(k.includes('cta')||k.includes('nut')) map.cta=i;
+      else if(k.includes('phu trach')) map.owner=i;
+    });
+
+    ACTS = rows.map(r => {
+      let hotVal = 999;
+      const rawHot = String(r[map.hot] || '').toLowerCase().trim();
+      const num = parseInt(rawHot);
+      if (!isNaN(num) && num > 0) hotVal = num; else if (rawHot.includes('x')) hotVal = 1;
+      return {
+        title: r[map.title], sum: r[map.sum], img: normalizeImg(r[map.img], FOLDER_ACT),
+        tag: r[map.tag], year: r[map.year], owner: r[map.owner], link: r[map.link] || '#',
+        hotVal: hotVal, cta: r[map.cta] || 'Xem chi tiết'
+      };
+    }).filter(x => x.title);
+    ACTS.sort((a,b) => a.hotVal - b.hotVal);
+  }
+  const tags = [...new Set(ACTS.map(a => a.tag).filter(Boolean))].sort();
+  $('#actFilters').innerHTML = tags.map(t => `<button class="q-btn" onclick="filterAct('${t}')">${t}</button>`).join('');
+  renderActs();
+}
+
+window.filterAct = (tag) => {
+  activeActTag = (activeActTag === tag) ? null : tag;
+  $$('#actFilters .q-btn').forEach(btn => btn.classList.toggle('active', btn.innerText === activeActTag));
+  showAllActs = false;
+  renderActs();
+}
+
+function renderActs() {
+  const term = rmAccent($('#actSearchInput').value);
+  let list = ACTS;
+  if (term) list = list.filter(a => rmAccent(a.title + a.tag + a.year).includes(term));
+  if (activeActTag) list = list.filter(a => a.tag === activeActTag);
+  const displayList = showAllActs ? list : list.slice(0, 3);
+  
+  $('#actGrid').innerHTML = displayList.map(a => `
+    <div class="act-card">
+      <div class="act-bg"><img src="${a.img}" loading="lazy" decoding="async" onerror="this.src='image/logo.jpg'"></div>
+      ${a.hotVal < 999 ? '<div class="ribbon">Nổi bật</div>' : ''}
+      <div class="act-content">
+        <h3 class="act-title">${a.title}</h3>
+        <div class="act-tags">
+          ${a.tag ? `<span class="act-chip">${a.tag}</span>` : ''}
+          ${a.year ? `<span class="act-chip">${a.year}</span>` : ''}
+          ${a.owner ? `<span class="act-chip">${a.owner}</span>` : ''}
+        </div>
+        <p class="act-sum">${a.sum}</p>
+        <a href="${a.link}" target="_blank" class="act-btn">${a.cta}</a>
+      </div>
+    </div>
+  `).join('');
+  const btnMore = $('#btnActMore');
+  if (list.length > 3) { btnMore.style.display = 'inline-flex'; btnMore.textContent = showAllActs ? 'Thu gọn' : 'Xem thêm'; } 
+  else { btnMore.style.display = 'none'; }
+}
+
+$('#btnActMore').onclick = () => { showAllActs = !showAllActs; renderActs(); };
+$('#btnLoad').onclick = async () => { const f = $('#excelFile').files[0]; if(f){ const b=await f.arrayBuffer(); parseMembers(b); } };
+
+/* ================= ORG CHART ================= */
+function buildTimeline(){
+  const byYear = new Map();
+  const sorted = [...MEMBERS].sort((a,b)=> parseInt(a.join||0) - parseInt(b.join||0));
+  sorted.forEach((m, idx) => {
+    const r = rmAccent(m.role);
+    const allow = r.includes('cuu') || r.includes('thanh vien') || r.includes('truong nha') || r.includes('quan ly') || r.includes('giam linh') || r.includes('hoi truc');
+    if(allow) {
+      const y = m.join || '—';
+      if(!byYear.has(y)) byYear.set(y, []);
+      const originalIdx = MEMBERS.indexOf(m); 
+      byYear.get(y).push({ ...m, oIdx: originalIdx });
+    }
+  });
+  let html = '';
+  byYear.forEach((arr, y)=>{
+    html += `<div style="margin-bottom:24px"><div style="color:var(--brand);font-weight:800;margin-bottom:8px;font-size:1.1rem">Năm ${y}</div><div style="display:flex;flex-wrap:wrap;gap:8px">`;
+    arr.forEach(m => { html += `<div class="chip" onclick="closeModal('orgModal');openMemberModal(${m.oIdx})">${m.name} - ${m.role}</div>`; });
+    html += `</div></div>`;
+  });
+  $('#orgBody').innerHTML = html;
+}
+
+/* ================= PRELOAD ================= */
+const PRE_DATA = [
+  { name: "Vũ Tấn Lực", role: "Trưởng nhà", holy: "Phanxico Xavie", birth: "2005", school: "Đại học Yersin", major: "Quan hệ công chúng", join: "2023", avatar: "luc.jpg", fb: "https://web.facebook.com/lucc.vux.7", email: "luc3007vu@gmail.com", phone: "0346146212" },
+  { name: "Bùi Quốc Thái", role: "Quản lý", holy: "Phero-Phaolo", birth: "2006", school: "Đại học Yersin", major: "Công nghệ sinh học", join: "2024", avatar: "thai.jpg", fb: "https://www.facebook.com/quoc.thai.62138" },
+  { name: "Vũ Nguyễn Bình An", role: "Giám Linh", holy: "Phero", birth: "2006", school: "Đại học Đà Lạt", major: "Công nghệ thông tin", join: "2024", avatar: "an.jpg", fb: "https://www.facebook.com/annguyen201x" },
+  { name: "Bon Krong Y Doan", role: "Hội trực", holy: "Giuse", birth: "2005", school: "Cao Đẳng Đà Lạt", major: "Công nghệ thông tin", join: "2023", avatar: "doan.jpg", fb: "https://www.facebook.com/emdoantoichoi" },
+  { name: "Cao Nguyên Hoàng", role: "Thành Viên", holy: "Giuse", birth: "2006", school: "Đại Học Đà Lạt", major: "Công nghệ thông tin", join: "2024", avatar: "hoang.jpg", fb: "https://www.facebook.com/caonguyenhoang1026", email: "2411841@dlu.edu.vn" },
+  { name: "Trần Anh Dũng", role: "Thành viên", holy: "Giuse", birth: "2006", school: "Cao Đẳng Đà Lạt", major: "CN kỹ thuật ô tô", join: "2024", avatar: "dung.jpg", fb: "https://www.facebook.com/tran.dung.489667" },
+  { name: "Nguyễn Duy Khang", role: "Thành viên", holy: "Đaminh", birth: "2006", school: "Cao Đẳng Đà Lạt", major: "CN kỹ thuật ô tô", join: "2024", avatar: "khang.jpg", fb: "https://www.facebook.com/nguyen.duy.khang.867135" },
+  { name: "Tpúh Cao Trưởng", role: "Thành viên", holy: "Luca", birth: "2003", school: "Đại học Đà Lạt", major: "Du Lịch", join: "2021", avatar: "truong.jpg", fb: "https://www.facebook.com/truong.tpuh" },
+  { name: "Nguyễn Quang Tuyến", role: "Thành Viên", holy: "Đaminh", birth: "2007", school: "Cao Đẳng Y Tế", major: "Xét nghiệm Y học", join: "2025", avatar: "tuyen.jpg", fb: "https://www.facebook.com/nguyen.q.tuyen.2025" },
+  { name: "Nguyễn Hữu Anh", role: "Thành viên", holy: "Giuse", birth: "2006", school: "Đại học Yersin", major: "Thiết kế nội thất", join: "2024", avatar: "huu.jpg", fb: "https://www.facebook.com/nguyen.huu.anh.183794" },
+  { name: "Phạm Đỗ Bảo Trí", role: "Thành viên", holy: "Vincente", birth: "2003", school: "Đại học Yersin", major: "CN kỹ thuật ô tô", join: "2021", avatar: "tri.jpg", fb: "https://www.facebook.com/pham.tri.881198" },
+  { name: "Nguyễn Duy Khôi", role: "Thành viên", holy: "Đaminh", birth: "2007", school: "Đại Học Đà Lạt", major: "Công nghệ sinh học", join: "2025", avatar: "khoi.jpg", fb: "https://www.facebook.com/nguyen.duy.khoi.10808" },
+  { name: "Phan Nguyễn Thiên Phúc", role: "Thành Viên", holy: "GioanBaotixita", birth: "2007", school: "Đại Học Đà Lạt", major: "CN kỹ thuật môi trường", join: "2025", avatar: "phuc.jpg", fb: "https://www.facebook.com/Spinipop" },
+  { name: "Nguyễn Chánh Hoàng Quân", role: "Hàng Xóm", holy: "Phanxico Xavie", birth: "2006", school: "Cao Đẳng Đà Lạt", major: "Ngôn Ngữ Anh", join: "2025", avatar: "quan.jpg" },
+  { name: "Lê Hoàng Thiên Phúc", role: "Cựu", holy: "Đaminh Savio", birth: "2004", school: "Đại học Yersin", major: "Tâm Lý Học", join: "2025", avatar: "mini.jpg", fb: "https://www.facebook.com/phucmini01082004" },
+  { name: "Lê Vĩnh Thành", role: "Cựu", holy: "Toma", birth: "2002", school: "Đại Học Đà Lạt", major: "Ngôn Ngữ Anh", join: "2020", avatar: "thanh.jpg", fb: "https://web.facebook.com/LeVinhThanh11" },
+  { name: "K Thuyền", role: "Cựu", holy: "Giuse", birth: "2005", school: "Đại Học Đà Lạt", major: "Khoa học dữ liệu", join: "2024", avatar: "thuyen.jpg" },
+  { name: "Vũ Trần Hoàng Bảo", role: "Cựu", holy: "Đaminh", birth: "2006", school: "Đại Học Đà Lạt", major: "Ngôn ngữ anh", join: "2024", avatar: "bao.jpg" },
+  { name: "Phạm Trần Tuấn Anh", role: "Cựu", holy: "Giuse", birth: "2005", school: "Đại Học Đà Lạt", major: "Luật dân sự", join: "2023", avatar: "tuananh.jpg" },
+  { name: "Rmah Long", role: "Cựu", holy: "Giuse", birth: "2000", school: "Đại Học Đà Lạt", major: "Giáo dục tiểu học", join: "2023", avatar: "long.jpg" },
+  { name: "Trần Thiên", role: "Cựu", holy: "", birth: "2001", school: "Đại Học Đà Lạt", major: "Công nghệ thông tin", join: "2019", avatar: "thien.jpg" },
+  { name: "Roda K Hiệp", role: "Cựu", holy: "Giuse", birth: "2002", school: "Đại Học Đà Lạt", major: "Nông Học", join: "2020", avatar: "hiep.jpg" }
+];
+
+const PRE_DATA_ACTS = [
+  { title: "NỘP ĐƠN GIA NHẬP LXBC", sum: "Đăng ký để trở thành thành viên chính thức.", tag: "Hướng dẫn", year: "", img: "nopdon.jpg", link: "https://docs.google.com/forms/d/1CZDA4neWpuzDb2Yt9v54WbPFIqpkLmxR-Hod9oaFlFQ/edit?hl=vi", hotVal: 1, cta: "Nộp Đơn" },
+  { title: "TKB-LXBC", sum: "Xem thời khóa biểu sinh hoạt chung của nhà.", tag: "Dịch vụ", year: "", img: "tkb.jpg", link: "https://lxbc.netlify.app/tkb", hotVal: 999, cta: "ĐẾN TKB ẢO" }
+];
+
+(async () => {
+  try { 
+    const res = await fetch('thanhvien.xlsx'); 
+    if(res.ok) { const buf = await res.arrayBuffer(); parseMembers(buf); $('#drop').style.display = 'none'; } 
+    else parseMembers(PRE_DATA); 
+  } catch(e) { parseMembers(PRE_DATA); }
+
+  try { 
+    const resA = await fetch('hoatdong.xlsx'); 
+    if(resA.ok) { const bufA = await resA.arrayBuffer(); parseActs(bufA); } 
+    else parseActs(PRE_DATA_ACTS); 
+  } catch(e) { parseActs(PRE_DATA_ACTS); }
+})();
+
+const slides = $$('.slide'), dots = $('#dots');
+let cur = 0;
+slides.forEach((_,i)=>{ const d=document.createElement('div'); d.className=`dot ${i===0?'active':''}`; d.onclick=()=>setSlide(i); dots.appendChild(d); });
+function setSlide(i){ 
+  slides.forEach(s=>s.classList.remove('active')); 
+  $$('.dot').forEach(d=>d.classList.remove('active')); 
+  slides[i].classList.add('active'); 
+  $$('.dot')[i].classList.add('active'); 
+  cur=i; 
+}
+setInterval(()=>setSlide((cur+1)%slides.length), 5000);
+$('#year').innerText = new Date().getFullYear();
+</script>
+</body>
+</html>
