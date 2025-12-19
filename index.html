@@ -82,6 +82,9 @@ img { max-width: 100%; display: block; }
 .chip:hover { background: var(--brand); color: #000; border-color: var(--brand); }
 
 .section { padding: 48px 0; border-bottom: 1px solid var(--border); }
+/* GIẢM KHOẢNG CÁCH SECTION GIỚI THIỆU */
+#gioi-thieu { padding-top: 30px; padding-bottom: 40px; }
+
 .section h2 { font-size: clamp(24px, 4vw, 36px); margin: 0 0 20px; font-weight: 800; letter-spacing: -1px; }
 
 .motto-frame {
@@ -150,19 +153,23 @@ img { max-width: 100%; display: block; }
 
 /* STYLE NÚT QR (GLASSMORPHISM) */
 .btn-qr {
-  position: absolute; top: 10px; right: 10px; z-index: 10;
-  width: 44px; height: 44px; border-radius: 50%;
-  background: rgba(20, 20, 20, 0.4); 
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  position: absolute; top: 6px; right: 6px; z-index: 10;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25); 
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
   border: 1px solid rgba(255, 200, 0, 0.3);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   transition: 0.3s ease;
 }
 .btn-qr:hover { 
   transform: scale(1.1); 
-  background: rgba(255, 200, 0, 0.15); border-color: var(--brand);
-  box-shadow: 0 0 20px rgba(255, 200, 0, 0.3);
+  background: rgba(255, 200, 0, 0.2); 
+  border-color: var(--brand);
+  box-shadow: 0 0 15px rgba(255, 200, 0, 0.4);
+}
+.btn-qr svg {
+  width: 18px; height: 18px; color: var(--brand);
 }
 
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
@@ -299,7 +306,10 @@ img { max-width: 100%; display: block; }
 
 .m-note { margin-top: 12px; color: var(--brand); font-style: italic; font-size: 0.9rem; font-weight: 500; line-height: 1.4; padding: 4px 12px; border-radius: 6px; background: rgba(255, 200, 0, 0.1); display: inline-block; }
 
-#banner-wrapper { padding: 20px 16px; background: #000; }
+#banner-wrapper { 
+  padding: 20px 16px 0 16px; /* Sửa theo yêu cầu cũ */
+  background: #000; 
+}
 .hero-slider { 
   position: relative; 
   aspect-ratio: 16/9; 
@@ -414,7 +424,7 @@ footer { border-top: 1px solid var(--border); background: #050505; }
 
     <footer>
       <div class="container" style="padding:40px 0;text-align:center;color:#555;font-size:0.85rem">
-        © <span id="year"></span> WEB LXBC-DEVELOPPED BY HOWL.
+        © <span id="year"></span> WEB LXBC-DEVELOPPED BY NGUYEN HOANG.
       </div>
     </footer>
   </main>
@@ -678,7 +688,7 @@ function renderAllMembersOnce() {
     const isManager = rmAccent(m.role).includes('quan ly');
     const qrBtn = isManager ? `
       <div class="btn-qr" onclick="openQrModal(event)">
-        <span style="font-weight:800; font-size:14px; color:var(--brand)">QR</span>
+        <svg fill="currentColor" viewBox="0 0 24 24"><path d="M3 3h6v6H3V3zm2 2v2h2V5H5zm8-2h6v6h-6V3zm2 2v2h2V5h-2zM3 13h6v6H3v-6zm2 2v2h2v-2H5zm13-2h3v2h-3v-2zm-3 2h2v2h-2v-2zm-3 2h3v2h-3v-2zm3 3h2v2h-2v-2zm-6-5h3v2H8v-2zm3 3h2v2h-2v-2z"></path></svg>
       </div>` : '';
 
     return `
