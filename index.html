@@ -473,8 +473,8 @@ const normalizeImg = (u, folder) => {
 
     if (flakesBack.length + flakesFront.length < maxFlakesTotal) {
       // Ngẫu nhiên chọn loại tuyết và lớp (trước/sau)
-      const type = Math.random() > 0.5 ? '❄️' : '•';
-      const isFront = Math.random() > 0.6; // 40% cơ hội ra lớp trước
+      const type = Math.random() > 0.5 ? '❆' : '•';
+      const isFront = Math.random() > 0.7; // 30% cơ hội ra lớp trước
       
       const flake = {
         x: Math.random() * width,
