@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Lịch Học — Safari & Mobile Optimized</title>
+  <style>
+    /* ---------- Base ---------- */
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html { -webkit-text-size-adjust:100%; }
+    body { 
+      background:#f5f5f5; color:#202124; font-family:Arial,sans-serif; 
+      font-size:14px; line-height:1.5; 
+      padding-bottom:calc(64px + env(safe-area-inset-bottom));
+      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    }
+    a, button, .day, .footer { -webkit-tap-highlight-color:rgba(0,0,0,0); }
+
+    /* ---------- Sticky header ---------- */
+    .fixed-header { 
+      position:sticky; top:0; z-index:100; 
+      background:#fff; border-bottom:1px solid #eee; 
+      padding-top:env(safe-area-inset-top);
+      will-change:transform; -webkit-transform:translateZ(0);
+    }
+    .header { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; gap:8px; }
+    .header-title { text-align:center; flex:1; cursor:pointer; }
+    .header-title .subtitle { font-size:14px; color:#666; margin-bottom:4px; font-weight:400; }
+    .header-title .semester { font-size:16px; font-weight:600; color:#222; }
+    .header-actions { display:none; }
+
+    .days { display:flex; justify-content:space-between; padding:5px 8px; background:#fff; user-select:none; gap:6px; }
+    .day { flex:1; text-align:center; padding:6px 4px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; position:relative; border-radius:2px; }
+    .day-number { font-size:16px; font-weight:700; color:#111; }
+    .day-name { font-size:11px; color:#666; }
+    .day.today, .day.active { outline:2px solid var(--today-color, #d8f0c8); border-radius:2px; }
+    .day.active { background:var(--active-color, #d8f0c8); }
+    .dots { display:flex; justify-content:center; margin-top:-3px; gap:2px; }
+    .dot { width:5px; height:5px; border-radius:50%; }
+    .dot.pink { background:#fbd0d9; } .dot.blue { background:#d2ecf2; }
+    .dot.yellow { background:#ffecd9; } .dot.purple { background:#f3e7fc; }
+    .date-title { text-align:center; padding:6px; font-size:14px; color:#555; background:#fff; font-weight:500; }
+
+    /* ---------- Subject cards ---------- */
+    .subject { background:#fff; border-radius:5px; margin:10px 12px; display:flex; overflow:hidden; border:1px solid #eee; position:relative; }
+    .subject-periods { width:40px; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:14px 0; font-weight:bold; font-size:13px; color:#333; position:relative; }
+    .subject-periods::after{
+      content:"";
+      position:absolute;
+      top:42px; 
+      bottom:42px;
+      left:50%;
+      width:1px;                       /* bề rộng nguyên để khớp pixel */
+      transform:translateX(-1px);       /* canh giữa chính xác */
+      background:repeating-linear-gradient(
+        to bottom,
+        #363636 0 4px,                  /* đoạn nét */
+        transparent 0px 5px            /* khoảng trống */
+      );
+      pointer-events:none;
+      will-change:auto;                 /* tránh ép GPU gây blur */
+    }
+    .subject-content { flex:1; padding:12px; }
+    .subject-title { font-size:15px; font-weight:600; margin-bottom:8px; color:#222; }
+    .subject-info { display:flex; align-items:center; gap:6px; font-size:13px; margin:6px 0; line-height:1.6; font-weight:400; }
+    .subject-info.time { color:#000; font-weight:500; }
+    .subject-info.teacher, .subject-info.room { color:#000; }
+    .subject-info.class { color:#6c757d; }
+    .subject-icon { width:12px; height:12px; object-fit:contain; display:inline-block; }
+    .subject-icon-up { width:15px; height:18px; object-fit:contain; display:inline-block; cursor:pointer; }
+    .subject-icon-down { width:15px; height:10px; object-fit:contain; display:inline-block; }
+
+    .footer { 
+      position:fixed; left:0; right:0; bottom:0; z-index:120; background:#fff; 
+      padding:12px calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+      text-align:center; font-weight:bold; border-top:1px solid #eee; color:#222; font-size:14px; cursor:pointer; 
+    }
+
+    .pink .subject-periods { background:#fbd0d9; }
+    .blue .subject-periods { background:#d2ecf2; }
+    .yellow .subject-periods { background:#ffecd9; }
+    .purple .subject-periods { background:#f3e7fc; }
+
+    /* ---------- Overlay & Popups ---------- */
+    .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:200; -webkit-overflow-scrolling:touch; }
+
+    .popup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+      background:#fff; padding:18px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.25); z-index:210; width:360px; max-width:92%; font-family:Arial,sans-serif; }
+    .popup h3 { margin-top:0; color:#333; font-size:18px; margin-bottom:6px; }
+    .popup p { margin:6px 0 12px 0; font-size:13px; color:#555; }
+
+    input, select, button { width:100%; padding:10px 12px; margin:6px 0; border:1px solid #e4e4e4; border-radius:8px; font-size:16px; -webkit-appearance:none; appearance:none; outline:none; background:#fff; }
+    .popup .row { display:flex; gap:8px; align-items:center; }
+    .popup .row .flex { flex:1; }
+    .popup .actions { margin-top:10px; display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+    .popup button { padding:10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:600; font-size:14px; }
+
+    .btn-neutral { background:#fff; color:#222; }
+    .btn-primary { background:#000; color:#f6c205; }
+    .btn-outline { background:#fff; border:1px solid #ddd; color:#222; }
+
+    /* === Khung nổi bật cho các nút === */
+    #randomSubjectBtn,ss
+    #introBtn,
+    #addSubjectBtn,
+    #closePopupBtn {
+      position:relative;
+      border:2px solid #222 !important;
+      box-shadow:0 2px 0 #222;
+      border-radius:12px;
+      transition:transform .06s ease, box-shadow .06s ease, border-color .2s ease, background .2s ease;
+    }
+    #randomSubjectBtn:hover,
+    #introBtn:hover,
+    #addSubjectBtn:hover,
+    #closePopupBtn:hover { border-color:#000; box-shadow:0 3px 0 #000; }
+    #randomSubjectBtn:active,
+    #introBtn:active,
+    #addSubjectBtn:active,
+    #closePopupBtn:active { transform:translateY(1px); box-shadow:0 1px 0 #000; }
+
+    /* DELETE ICON — hiện khi nhấn-giữ */
+    .delete-icon { 
+      position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%; 
+      background:#ff4d4f; color:#fff; font-size:14px; font-weight:bold; 
+      display:none; align-items:center; justify-content:center; cursor:pointer; 
+    }
+    .subject.show-delete .delete-icon { display:flex; }
+
+    body.popup-open { overflow:hidden; position:fixed; inset:0; }
+
+    @media (prefers-reduced-motion:reduce) {
+      * { animation:none !important; transition:none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="fixed-header">
+    <div class="header">
+      <!-- Icon 5.png: bấm mở trang web (DLU mặc định ở data-link) -->
+      <div>
+        <!-- THÊM LINK VÀO ĐÂY -->
+        <img class="subject-icon-up" data-icon="up" data-link="https://lxbc.netlify.app" alt="^" title="Mở liên kết" decoding="async" loading="lazy">
+      </div>
+
+      <div class="header-title">
+        <div class="subtitle">Lịch Học</div>
+        <div class="semester" id="semesterText">
+          HK02 2025-2026 T5
+          <img class="subject-icon-down" data-icon="down" alt="v" decoding="async" loading="lazy">
+        </div>
+      </div>
+
+      <div class="header-actions"></div>
+    </div>
+
+    <div class="days" id="days"></div>
+    <div class="date-title" id="dateTitle"></div>
+  </div>
+
+  <div class="footer" id="todayBtn">Hôm nay</div>
+
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Popup chính (thêm môn) -->
+  <div class="popup" id="mainPopup" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
+    <h3 id="popupTitle">Thêm môn học</h3>
+    <p>Chọn buổi học (mỗi buổi mặc định <strong>4 tiết</strong>) hoặc dùng <strong>Random</strong>.</p>
+    <input type="text" id="subjectTitle" placeholder="Tên môn học" inputmode="text">
+    <select id="sessionSelect" aria-label="Chọn buổi học">
+      <option value="">-- Chọn buổi học --</option>
+      <option value="morning">Sáng (Tiết 1 → 4)</option>
+      <option value="afternoon">Chiều (Tiết 7 → 10)</option>
+      <option value="evening">Tối (Tiết 11 → 14)</option>
+    </select>
+    <input type="text" id="subjectTeacher" placeholder="Giảng viên" inputmode="text">
+    <input type="text" id="subjectRoom" placeholder="Phòng học" inputmode="text">
+    <input type="text" id="subjectClass" placeholder="Giảng đường" inputmode="text">
+
+    <label for="colorSelect" style="font-size:13px; color:#555; margin-top:8px; display:block;">Đổi giao diện:</label>
+    <select id="colorSelect">
+      <option value="#d8f0c8">Da Lat University</option>
+      <option value="#e1b8b4">Yersin University</option>
+      <option value="#c8e1f0">Lac Hong University</option>
+      <option value="#f0e1c8">GTVT University</option>
+    </select>
+
+    <div class="actions">
+      <button id="randomSubjectBtn" class="btn-outline" type="button">Random</button>
+      <button id="addSubjectBtn" class="btn-neutral" type="button">Thêm vào lịch</button>
+      <button id="closePopupBtn" class="btn-neutral" type="button">Huỷ / Thoát</button>
+      <button id="introBtn" class="btn-primary" type="button"><b>LXBC</button>
+    </div>
+  </div>
+
+  <!-- Popup hướng dẫn khi mở web -->
+  <div class="popup" id="helpPopup" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <h3 id="helpTitle">Hướng dẫn nhanh</h3>
+    <p>• Nhấn vào tiêu đề <strong>Lịch Học</strong> để mở form thêm môn.</p>
+    <p>• Nhấn giữ vào một thẻ môn để hiện nút <strong>Xoá (X)</strong>.</p>
+    <p>• Nút <strong>Random</strong> điền nhanh mẫu 
+    <p>• Nút <strong>LXBC</strong> mở web LBXC.</p>
+    <p> - Phát triển chính: Howl -
+    <div class="actions">
+      <button id="helpCloseBtn" class="btn-neutral" type="button">Đã hiểu</button>
+    </div>
+  </div>
+
+  <script>
+  // ---------- Data ----------
+  const icons = { clock:"1.png", teacher:"2.png", room:"3.png", class:"4.png", up:"5.png", down:"6.png" };
+  const colors = ["pink","blue","yellow","purple"];
+
+  const footer = document.getElementById("todayBtn");
+  const overlay = document.getElementById("overlay");
+  const mainPopup = document.getElementById("mainPopup");
+  const helpPopup = document.getElementById("helpPopup");
+  const daysContainer = document.getElementById("days");
+  const headerTitle = document.querySelector(".header-title");
+  const semesterText = document.getElementById("semesterText");
+  const dateTitle = document.getElementById("dateTitle");
+
+  function getMonday(d) {
+    d = new Date(d);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  }
+
+  const today = new Date();
+  let currentWeekStart = getMonday(today);
+  const todayKey = formatDateKey(today);
+  let activeDayKey = todayKey;
+
+  const schedule = {
+    [todayKey]: [
+      { title:"Thời Khoá Biểu Ảo Cho Sinh Viên SOB", startPeriod:1, endPeriod:2, time:"2 Tiết", teacher:"Developer: Howl", room:"LXBC.B2", className:"LXBC-SOB" }
+    ]
+  };
+
+  const weekdayNames = ["T2","T3","T4","T5","T6","T7","CN"];
+  const fullWeekdayNames = ["Chủ Nhật","Thứ Hai","Thứ Ba","Thứ Tư","Thứ Năm","Thứ Sáu","Thứ Bảy"];
+
+  function formatDateKey(date) { return date.toISOString().split("T")[0]; }
+  function getFullDateTitle(date){
+    const weekday = fullWeekdayNames[date.getDay()];
+    const dd = String(date.getDate()).padStart(2,"0");
+    const mm = date.getMonth()+1;
+    const yyyy = date.getFullYear();
+    return `${weekday}, ${dd} Tháng ${mm} ${yyyy}`;
+  }
+
+  function updateSemesterText(){
+    const baseDate = new Date("2025-10-02");
+    const diffWeeks = Math.floor((currentWeekStart - getMonday(baseDate)) / (7 * 24 * 60 * 60 * 1000));
+    const currentWeek = -8 + diffWeeks;
+    semesterText.innerHTML = `HK02 2025-2026 T${currentWeek} <img class="subject-icon-down" data-icon="down" alt="v">`;
+    document.querySelectorAll(".subject-icon-down").forEach(img=>{ const key = img.getAttribute("data-icon"); if(icons[key]) { img.src = icons[key]; img.loading = "lazy"; img.decoding = "async"; } });
+  }
+
+  function renderDays(){
+    const frag = document.createDocumentFragment();
+    daysContainer.textContent = "";
+    for (let i=0;i<7;i++) {
+      const d = new Date(currentWeekStart); d.setDate(d.getDate()+i);
+      const key = formatDateKey(d);
+
+      const dayDiv = document.createElement("div");
+      dayDiv.className = "day";
+      dayDiv.innerHTML = `<div class="day-number">${String(d.getDate()).padStart(2,"0")}</div><div class="day-name">${weekdayNames[i]}</div><div class="dots"></div>`;
+      if (key===todayKey) dayDiv.classList.add("today");
+      if (key===activeDayKey) dayDiv.classList.add("active");
+      dayDiv.dataset.key = key;
+
+      const dotsContainer = dayDiv.querySelector(".dots");
+      const subjs = schedule[key] || [];
+      for (let j=0; j<subjs.length; j++) {
+        const dot = document.createElement("div");
+        dot.className = `dot ${colors[j % colors.length]}`;
+        dotsContainer.appendChild(dot);
+      }
+
+      frag.appendChild(dayDiv);
+    }
+    daysContainer.appendChild(frag);
+
+    const showDate = new Date(activeDayKey);
+    dateTitle.textContent = getFullDateTitle(showDate);
+
+    renderSubjects(activeDayKey);
+    updateSemesterText();
+  }
+
+  function renderSubjects(dateKey){
+    document.querySelectorAll(".subject").forEach(el=>el.remove());
+
+    const subjects = schedule[dateKey] || [];
+    const frag = document.createDocumentFragment();
+
+    subjects.forEach((s,idx)=>{
+      const color = colors[idx % colors.length];
+      const card = document.createElement("div");
+      card.className = `subject ${color}`;
+      card.dataset.index = String(idx);
+      card.innerHTML = `
+        <div class="subject-periods"><div>${s.startPeriod}</div><div>${s.endPeriod}</div></div>
+        <div class="subject-content">
+          <div class="subject-title">${s.title}</div>
+          <div class="subject-info time"><img class="subject-icon" data-icon="clock" alt="clock"><span>${s.time}</span></div>
+          <div class="subject-info teacher"><img class="subject-icon" data-icon="teacher" alt="teacher"><span>${s.teacher}</span></div>
+          <div class="subject-info room"><img class="subject-icon" data-icon="room" alt="room"><span>${s.room}</span></div>
+          <div class="subject-info class"><img class="subject-icon" data-icon="class" alt="class"><span>${s.className}</span></div>
+        </div>
+        <div class="delete-icon" role="button" aria-label="Xóa">×</div>`;
+
+      frag.appendChild(card);
+    });
+
+    document.body.insertBefore(frag, footer);
+
+    document.querySelectorAll(".subject-icon").forEach(img=>{ const key = img.getAttribute("data-icon"); if(icons[key]) { img.src = icons[key]; img.loading = "lazy"; img.decoding = "async"; } });
+  }
+
+  // ---------- Lifecycles ----------
+  document.addEventListener("DOMContentLoaded", () => {
+    // Lazy load header icons
+    document.querySelectorAll(".subject-icon-up,.subject-icon-down").forEach(img=>{
+      const key = img.getAttribute("data-icon");
+      if(icons[key]) { img.src = icons[key]; img.loading = "lazy"; img.decoding = "async"; }
+    });
+
+    // Click icon 5.png (up) => mở link ngoài
+    document.querySelectorAll('img.subject-icon-up[data-icon="up"]').forEach(img => {
+      const link = img.getAttribute('data-link') || 'https://lxbc.online';
+      img.addEventListener('click', () => {
+        window.open(link, '_blank', 'noopener,noreferrer');
+      }, { passive:true });
+    });
+
+    // Hiện popup hướng dẫn lần đầu
+    try {
+      const seen = localStorage.getItem('help_seen_v1');
+      if (!seen) {
+        openPopup(helpPopup);
+        localStorage.setItem('help_seen_v1', '1');
+      }
+    } catch(_) {
+      // nếu localStorage lỗi (private mode), vẫn mở popup
+      openPopup(helpPopup);
+    }
+
+    renderDays();
+  }, { once:true });
+
+  // ---------- Interactions ----------
+  // Click day
+  daysContainer.addEventListener("click", (e)=>{
+    const day = e.target.closest('.day');
+    if(!day) return;
+    activeDayKey = day.dataset.key;
+    requestAnimationFrame(renderDays);
+  }, { passive:true });
+
+  // Swipe week
+  let startX = 0; let isMouseDown = false;
+  daysContainer.addEventListener("touchstart", e => { if(e.touches[0]) startX = e.touches[0].clientX; }, { passive:true });
+  daysContainer.addEventListener("touchend", e => { const t = e.changedTouches && e.changedTouches[0]; if(t) handleSwipe(t.clientX - startX); }, { passive:true });
+  daysContainer.addEventListener("mousedown", e => { if (e.button === 0) { isMouseDown = true; startX = e.clientX; } });
+  daysContainer.addEventListener("mouseup", e => { if (isMouseDown) { handleSwipe(e.clientX - startX); isMouseDown = false; } });
+
+  function handleSwipe(deltaX) {
+    if (deltaX < -50) { currentWeekStart.setDate(currentWeekStart.getDate() + 7); requestAnimationFrame(renderDays); }
+    else if (deltaX > 50) { currentWeekStart.setDate(currentWeekStart.getDate() - 7); requestAnimationFrame(renderDays); }
+  }
+
+  // Footer: today
+  footer.addEventListener("click",()=>{
+    activeDayKey = todayKey; currentWeekStart = getMonday(today); requestAnimationFrame(renderDays);
+  }, { passive:true });
+
+  // Popup open/close (main)
+  headerTitle.addEventListener("click",()=>{ openPopup(mainPopup); });
+  document.getElementById("closePopupBtn").addEventListener("click",()=>{ closePopup(mainPopup); });
+  document.getElementById("helpCloseBtn").addEventListener("click",()=>{ closePopup(helpPopup); });
+  overlay.addEventListener("click",()=>{ closeAllPopups(); });
+
+  // Sessions & samples
+  const sessions = { morning:{start:1,end:4}, afternoon:{start:7,end:10}, evening:{start:11,end:14} };
+  const sampleSubjects = [
+    { title:"Pháp luật đại cương", teacher:"TS. Nguyễn Thị Minh Sang", room:"A27.06", className:"A27 - DHDL", session:"morning" },
+    { title:"Kỹ năng mềm", teacher:"ThS. Nguyễn Thị Thanh Huyền", room:"A27.08", className:"A27 - DHDL", session:"afternoon" },
+    { title:"Tin học cơ bản", teacher:"TS. Trần Văn An", room:"A27.03", className:"A27 - DHDL", session:"evening" }
+  ];
+
+  // Random fill
+  document.getElementById("randomSubjectBtn").addEventListener("click",()=>{
+    const subj = sampleSubjects[Math.floor(Math.random() * sampleSubjects.length)];
+    subjectTitle.value = subj.title; subjectTeacher.value = subj.teacher; subjectRoom.value = subj.room; subjectClass.value = subj.className; sessionSelect.value = subj.session;
+  });
+
+  // Add subject
+  document.getElementById("addSubjectBtn").addEventListener("click",()=>{
+    const title = subjectTitle.value.trim();
+    const session = sessionSelect.value;
+    const teacher = subjectTeacher.value.trim();
+    const room = subjectRoom.value.trim();
+    const className = subjectClass.value.trim();
+    if (!title || !session) { alert("Nhập tên môn học & chọn buổi!"); return; }
+    const {start,end} = sessions[session];
+    if(!schedule[activeDayKey]) schedule[activeDayKey] = [];
+    schedule[activeDayKey].push({ title, startPeriod:start, endPeriod:end, time:`${end-start+1} Tiết`, teacher, room, className });
+    requestAnimationFrame(()=>{ renderSubjects(activeDayKey); renderDays(); });
+    closePopup(mainPopup);
+  });
+
+  // LXBC => mở DLU
+  // Thêm link
+  document.getElementById("introBtn").addEventListener("click",()=>{
+    window.open('https://lxbc.netlify.app','_blank','noopener,noreferrer');
+  });
+
+  // Theme color switch
+  document.getElementById("colorSelect").addEventListener("change",function(){
+    const color = this.value;
+    document.documentElement.style.setProperty("--today-color", color);
+    document.documentElement.style.setProperty("--active-color", color);
+  });
+
+  // ========== DELETE FEATURE (nhấn-giữ từng thẻ) ==========
+  let pressTimer = null;
+  document.body.addEventListener('pointerdown', (e) => {
+    const card = e.target.closest('.subject');
+    if (!card) return;
+    pressTimer = setTimeout(() => {
+      card.classList.toggle('show-delete');
+    }, 500);
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(evt=>{
+    document.body.addEventListener(evt, () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, {passive:true});
+  });
+  document.body.addEventListener('click', (e) => {
+    const del = e.target.closest('.delete-icon');
+    if (!del) return;
+    const card = del.closest('.subject');
+    const idx = Number(card?.dataset.index ?? -1);
+    const list = schedule[activeDayKey] || [];
+    if (idx > -1 && idx < list.length) {
+      list.splice(idx, 1);
+      schedule[activeDayKey] = list;
+      renderSubjects(activeDayKey);
+      renderDays();
+    }
+  });
+
+  // ---------- Popup helpers ----------
+  function openPopup(el){
+    overlay.style.display = "block";
+    el.style.display = "block";
+    document.body.classList.add("popup-open");
+  }
+  function closePopup(el){
+    el.style.display = "none";
+    const anyOpen = Array.from(document.querySelectorAll('.popup')).some(p=>p.style.display==='block');
+    if(!anyOpen){
+      overlay.style.display = "none";
+      document.body.classList.remove("popup-open");
+    }
+  }
+  function closeAllPopups(){
+    document.querySelectorAll('.popup').forEach(p=>p.style.display='none');
+    overlay.style.display = "none";
+    document.body.classList.remove("popup-open");
+  }
+  </script>
+</body>
+</html>
