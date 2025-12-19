@@ -78,8 +78,8 @@ img { max-width: 100%; display: block; }
   border: 1px solid #333;
   box-shadow: 0 0 15px rgba(var(--frost-blue), 0.4);
 }
-.brand span::after { content: ' 🎄'; font-size: 1.1em; margin-left: 4px; filter: brightness(1.2); opacity: 1; }
-
+/* Thêm dấu > để chỉ áp dụng cho thẻ span cấp 1, không áp dụng cho thẻ con bên trong */
+.brand > span::after { content: ' 🎄'; font-size: 1.1em; margin-left: 4px; filter: brightness(1.2); opacity: 1; }
 .nav-links { display: flex; gap: 8px; }
 
 /* CHIP BUTTONS */
