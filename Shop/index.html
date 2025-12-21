@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shop Bán Phần Mềm</title>
+    <!-- NOTE: XLSX will be loaded dynamically to avoid environments that block CDN during static parsing -->
+    <style>
+        :root{--accent:#ffc800;--danger:#e60023;--muted:#6b7280}
+        body{font-family:Inter,Arial,sans-serif;background:#c7c7c7;margin:0;color:#111}
+        .container{width:92%;max-width:1200px;margin:0 auto}
+        .topbar{background:#060606;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+        .nav{display:flex;align-items:center;gap:18px;padding:14px 0}
+        .brand{font-weight:700;color:var(--accent);font-size:20px}
+        .nav-links{margin-left:20px;display:flex;gap:12px}
+        .nav-links a{color:#374151;text-decoration:none;padding:8px 12px;border-radius:8px}
+        .nav-links a.btn{background:var(--accent);color:#fff}
+        .nav-links a.active{background:var(--accent);color:#fff}
+
+        .hero{padding:22px 0}
+        .controls{display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap}
+        input[type=file]{display:none}
+        .file-label{background:#fff;border:1px dashed #d1d5db;padding:8px 12px;border-radius:10px;cursor:pointer;font-size:14px}
+
+        /* SEARCH BAR SIZING FIX */
+        .search{flex:1 1 420px;min-width:280px}
+        .search .wrap{display:flex;align-items:center;gap:10px;background:#fff;padding:12px 16px;border-radius:12px;border:1px solid #e6edf9;box-shadow:0 2px 6px rgba(59,130,246,0.06)}
+        .search svg{width:18px;height:18px}
+        .search input{border:0;outline:none;font-size:16px;flex:1;min-width:0}
+
+        .filters{display:flex;gap:8px;align-items:center}
+        .pill-select{background:#fff;border:1px solid #e6edf9;padding:8px 10px;border-radius:999px;min-width:48px;text-align:center}
+        .pill-select select{border:0;background:transparent;font-size:14px}
+        .code-input{border:1px solid #e6edf9;padding:8px 10px;border-radius:8px;background:#fff;min-width:140px}
+
+        h2{margin:18px 0 6px}
+        .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;margin-top:14px}
+        @media(max-width:1400px){.grid{grid-template-columns:repeat(4,1fr)}}
+        @media(max-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}}
+        @media(max-width:700px){.grid{grid-template-columns:repeat(2,1fr)}}
+
+        .item{background:#fff;padding:12px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.06);cursor:pointer;display:flex;flex-direction:column}
+        .image-wrap{position:relative;border-radius:12px;overflow:hidden}
+        .image-wrap img{width:100%;height:auto;aspect-ratio:920/430;object-fit:cover;display:block}
+
+        .name{font-weight:600;margin:10px 0 6px;font-size:15px}
+        .desc{color:var(--muted);font-size:13px;height:36px;overflow:hidden}
+
+        .price-row{display:flex;align-items:center;gap:10px;margin-top:10px}
+        .price-current{color:var(--danger);font-size:18px;font-weight:800}
+        .price-old{color:#9ca3af;text-decoration:line-through;font-size:14px}
+        .sale-pill{background:#ff4d4f;color:#fff;padding:4px 8px;border-radius:8px;font-weight:700;font-size:13px}
+
+        .pager{display:flex;gap:8px;align-items:center;margin-top:18px;justify-content:center}
+        .page-btn{padding:8px 12px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;cursor:pointer}
+        .page-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+        .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45)}
+        .modal .card{background:#fff;width:90%;max-width:700px;padding:20px;border-radius:12px}
+        .modal .card img{width:220px;float:right;border-radius:8px}
+        @media(max-width:640px){.nav-links{display:none}.modal .card img{float:none;width:100%;margin-bottom:12px}.search{min-width:120px}}
+
+        /* warning banner when XLSX not loaded */
+        .warning{background:#fff3cd;border:1px solid #ffeeba;color:#856404;padding:10px;border-radius:8px;margin-top:12px}
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="container nav">
+            <div class="brand">LXBC Shop</div>
+            <div class="nav-links">
+                <a href="#" data-topic="Làm việc">Làm việc</a>
+                <a href="#" data-topic="Học tập">Học tập</a>
+                <a href="#" data-topic="Giải trí">Giải trí</a>
+                <a href="#" data-topic="Game">Game</a>
+                <a class="btn" href="#">Khám phá</a>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+                <!-- upload label stays (small) but main download button removed as requested -->
+                <label id="fileLabel" class="file-label" for="fileInput">Tải file Excel (san_pham)</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="container hero">
+        <h2>Sản phẩm nổi bật</h2>
+        <div class="controls">
+            <div class="search"><div class="wrap"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="6" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><input id="q" placeholder="Tìm theo tên hoặc mô tả..."/></div></div>
+            <div class="filters">
+                <div class="pill-select"><select id="topicFilter"><option value="">Tất cả chủ đề</option></select></div>
+                <div class="pill-select"><select id="saleFilter"><option value="0">Tất cả sale</option><option value="20">Sale ≥ 20%</option><option value="50">Sale ≥ 50%</option><option value="75">Sale ≥ 75%</option></select></div>
+                <input id="codeFilter" class="code-input" placeholder="Lọc theo mã (Mã)" />
+                <label id="fileLabelSmall" class="file-label" for="fileInput">Chọn file</label>
+                <input type="file" id="fileInput" accept=".xlsx"/>
+            </div>
+        </div>
+
+        <div id="productList" class="grid"></div>
+        <div id="pager" class="pager"></div>
+        <div id="xslxWarning" class="warning" style="display:none">Thư viện xử lý Excel chưa tải được. Vui lòng cho phép tải script từ CDN hoặc kết nối internet, hoặc tải file mẫu trực tiếp.</div>
+    </div>
+
+    <div class="modal" id="modal"><div class="card">
+            <button id="closeModal" style="float:right">Đóng</button>
+            <h3 id="mName"></h3>
+            <p><strong>Mã: </strong><span id="mCode"></span></p>
+            <img id="mImg" src="" alt=""/>
+            <p id="mDesc"></p>
+            <p><strong>Giá: </strong><span id="mPrice"></span> <span class="sale" id="mSale"></span></p>
+            <p><span class="old" id="mOld"></span></p>
+            <p><strong>Chủ đề: </strong><span id="mTopic"></span></p>
+            <div style="margin-top:20px;display:flex;gap:10px"><a id="btnOrder" href="#" target="_blank" style="padding:10px 16px;background:#3b82f6;color:white;border-radius:8px;text-decoration:none;font-weight:600">Đặt hàng</a><a id="btnContact" href="#" target="_blank" style="padding:10px 16px;background:#10b981;color:white;border-radius:8px;text-decoration:none;font-weight:600">Liên hệ</a></div>
+            <p><a id="downloadExcelLink" href="#">Tải file Excel (san_pham)</a></p>
+        </div></div>
+
+<script>
+// Helper shortcuts
+const $ = id => document.getElementById(id);
+const escapeHtml = text => { if(text === null || text === undefined) return ''; return String(text).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[m]); };
+const formatPrice = n => Number(n).toLocaleString('vi-VN') + 'đ';
+
+let products = [];
+let uploadedBlobUrl = null;
+let currentPage = 1;
+const ITEMS_PER_PAGE = 6;
+
+const fileInput = $('fileInput');
+// download button removed as requested
+const topicFilter = $('topicFilter');
+const pager = $('pager');
+const productList = $('productList');
+const qInput = $('q');
+const xlsxWarning = $('xslxWarning');
+const fileLabel = $('fileLabel');
+const fileLabelSmall = $('fileLabelSmall');
+const codeFilter = $('codeFilter');
+
+// debounce helper
+const debounce = (fn, wait=250) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; };
+
+// Dynamically load XLSX library and return a promise that resolves when ready.
+function loadXLSX(){
+    if(window.XLSX) return Promise.resolve(window.XLSX);
+    return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js';
+        s.onload = () => { xlsxWarning.style.display='none'; resolve(window.XLSX); };
+        s.onerror = () => { xlsxWarning.style.display='block'; reject(new Error('Failed to load XLSX library')); };
+        document.head.appendChild(s);
+    });
+}
+
+function normalizeRow(r){
+    return {
+        code: String(r['Mã'] || r['Ma'] || r['Code'] || r['ID'] || '').trim(),
+        name: String(r['Tên'] || r['Ten'] || r['Name'] || '').trim(),
+        desc: String(r['Mô tả'] || r['Mo ta'] || r['Mota'] || r['Description'] || '').trim(),
+        price: Number(String(r['Giá'] || r['Gia'] || r['Price'] || 0).replace(/[^0-9.-]+/g,'')) || 0,
+        img: String(r['Ảnh'] || r['Anh'] || r['Image'] || '').trim(),
+        sale: Number(r['Sale'] || 0) || 0,
+        oldPrice: Number(String(r['Giá gốc'] || r['Gia goc'] || r['OldPrice'] || 0).replace(/[^0-9.-]+/g,'')) || 0,
+        topic: String(r['Chủ đề'] || r['Chu de'] || r['Chude'] || r['Topic'] || '').trim(),
+        link: String(r['Link'] || r['Liên hệ'] || r['Lien he'] || '').trim()
+    };
+}
+
+fileInput.addEventListener('change', async e => {
+    const file = e.target.files[0]; if(!file) return;
+    try{
+        await loadXLSX();
+    }catch(err){
+        console.error('Cannot load XLSX:', err);
+        return;
+    }
+
+    if(uploadedBlobUrl) URL.revokeObjectURL(uploadedBlobUrl);
+    uploadedBlobUrl = URL.createObjectURL(file);
+
+    const reader = new FileReader();
+    reader.onload = evt => {
+        try{
+            const data = new Uint8Array(evt.target.result);
+            const wb = window.XLSX.read(data, {type:'array'});
+            const sheet = wb.Sheets[wb.SheetNames[0]];
+            const json = window.XLSX.utils.sheet_to_json(sheet, {defval:''});
+            products = json.map(normalizeRow);
+            populateTopicFilter();
+            currentPage = 1; render();
+        }catch(err){
+            console.error('Error parsing excel', err); xlsxWarning.style.display='block';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+// Try auto-loading a default san_pham.xlsx from same folder. If found, parse and hide upload controls.
+async function tryAutoLoadDefault(){
+    try{
+        const resp = await fetch('./san_pham.xlsx');
+        if(!resp.ok) return false;
+        const blob = await resp.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        try{ await loadXLSX(); } catch(e){ console.error('XLSX load failed', e); xlsxWarning.style.display='block'; return false; }
+        const data = new Uint8Array(arrayBuffer);
+        const wb = window.XLSX.read(data, {type:'array'});
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const json = window.XLSX.utils.sheet_to_json(sheet, {defval:''});
+        products = json.map(normalizeRow);
+
+        // create downloadable blob URL so modal download link still works
+        if(uploadedBlobUrl) URL.revokeObjectURL(uploadedBlobUrl);
+        uploadedBlobUrl = URL.createObjectURL(blob);
+
+        // hide upload controls when auto-loaded
+        if(fileLabel) fileLabel.style.display = 'none';
+        if(fileLabelSmall) fileLabelSmall.style.display = 'none';
+        if(fileInput) fileInput.style.display = 'none';
+
+        populateTopicFilter();
+        currentPage = 1; render();
+        return true;
+    }catch(err){
+        // fails silently, leave controls visible
+        console.info('Auto-load default excel failed:', err);
+        return false;
+    }
+}
+
+function populateTopicFilter(){
+    const topics = Array.from(new Set(products.map(p => (p.topic||'').trim()).filter(Boolean))).sort();
+    topicFilter.innerHTML = '<option value="">Tất cả chủ đề</option>' + topics.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+}
+
+qInput.addEventListener('input', debounce(()=>{ currentPage = 1; render(); }, 300));
+$('saleFilter').addEventListener('change', ()=>{ currentPage = 1; render(); });
+topicFilter.addEventListener('change', ()=>{ currentPage = 1; render(); });
+codeFilter.addEventListener('input', debounce(()=>{ currentPage = 1; render(); }, 200));
+
+function getFiltered(){
+    const q = qInput.value.trim().toLowerCase();
+    const saleMin = Number($('saleFilter').value || 0);
+    const topic = (topicFilter.value || '').toLowerCase();
+    const codeQ = codeFilter.value.trim().toLowerCase();
+    return products.filter(p => {
+        const txt = ((p.name||'') + ' ' + (p.desc||'')).toLowerCase();
+        const matchTopic = topic ? ((p.topic||'').toLowerCase() === topic) : true;
+        const matchCode = codeQ ? (p.code||'').toLowerCase().includes(codeQ) : true;
+        return txt.includes(q) && (p.sale >= saleMin) && matchTopic && matchCode;
+    });
+}
+
+// Nav quick filters: clicking a nav item filters by its topic
+Array.from(document.querySelectorAll('.nav-links a[data-topic]')).forEach(a => {
+    a.addEventListener('click', e => {
+        e.preventDefault();
+        const t = a.getAttribute('data-topic') || '';
+        // mark active
+        document.querySelectorAll('.nav-links a').forEach(x => x.classList.remove('active'));
+        a.classList.add('active');
+        topicFilter.value = t;
+        currentPage = 1; render();
+    });
+});
+
+// simple svg fallback without http:// to avoid parser issues in some sandboxes
+const FALLBACK_SVG = "data:image/svg+xml;utf8,<svg width='400' height='240' xmlns='http://www.w3.org/2000/svg'><rect width='100%25' height='100%25' fill='%23eef2ff'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23777' font-size='18'>No Image</text></svg>";
+
+function render(){
+    const filtered = getFiltered();
+    const total = filtered.length;
+    const pageCount = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
+    if(currentPage > pageCount) currentPage = pageCount;
+    const start = (currentPage-1)*ITEMS_PER_PAGE;
+    const pageItems = filtered.slice(start, start + ITEMS_PER_PAGE);
+
+    productList.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    pageItems.forEach(p => {
+        const div = document.createElement('div'); div.className = 'item';
+
+        // build elements to avoid complex inline-escaped strings
+        const wrap = document.createElement('div'); wrap.className = 'image-wrap';
+        const img = document.createElement('img'); img.src = p.img || FALLBACK_SVG; img.alt = p.name || '';
+        img.onerror = () => { img.src = FALLBACK_SVG; };
+        wrap.appendChild(img);
+
+        const name = document.createElement('div'); name.className = 'name'; name.textContent = p.name || '';
+        const desc = document.createElement('div'); desc.className = 'desc'; desc.textContent = p.desc || '';
+        const priceRow = document.createElement('div'); priceRow.className = 'price-row';
+        const left = document.createElement('div');
+        const cur = document.createElement('div'); cur.className = 'price-current'; cur.textContent = formatPrice(p.price);
+        const old = document.createElement('div'); old.className = 'price-old'; old.textContent = p.oldPrice?formatPrice(p.oldPrice):'';
+        left.appendChild(cur); left.appendChild(old);
+        const sale = document.createElement('div'); sale.className = 'sale-pill'; sale.textContent = '-' + (p.sale||0) + '%';
+        priceRow.appendChild(left); priceRow.appendChild(sale);
+
+        div.appendChild(wrap); div.appendChild(name); div.appendChild(desc); div.appendChild(priceRow);
+        div.addEventListener('click', ()=> openModal(p));
+        frag.appendChild(div);
+    });
+    productList.appendChild(frag);
+    renderPager(Math.max(1, Math.ceil(total/ITEMS_PER_PAGE)));
+}
+
+function renderPager(pageCount){
+    pager.innerHTML = '';
+    const createBtn = (label, cls, click) => { const b = document.createElement('button'); b.className='page-btn '+(cls||''); b.textContent=label; b.addEventListener('click', click); return b; };
+    pager.appendChild(createBtn('Prev','', ()=>{ if(currentPage>1){ currentPage--; render(); }}));
+    for(let i=1;i<=pageCount;i++) pager.appendChild(createBtn(i, i===currentPage? 'active':'', ()=>{ currentPage=i; render(); }));
+    pager.appendChild(createBtn('Next','', ()=>{ if(currentPage<pageCount){ currentPage++; render(); }}));
+}
+
+// modal
+const modal = $('modal'); const mName = $('mName'); const mImg = $('mImg'); const mDesc = $('mDesc'); const mPrice = $('mPrice'); const mSale = $('mSale'); const mOld = $('mOld'); const mTopic = $('mTopic'); const dlLink = $('downloadExcelLink'); const mCode = $('mCode');
+function openModal(p){
+    mName.textContent = p.name || '';
+    mCode.textContent = p.code || '';
+    mImg.src = p.img || FALLBACK_SVG;
+    mDesc.textContent = p.desc || '';
+    mPrice.textContent = formatPrice(p.price || 0);
+    mSale.textContent = '-' + (p.sale || 0) + '%';
+    mOld.textContent = p.oldPrice? formatPrice(p.oldPrice): '';
+    mTopic.textContent = p.topic || '';
+    const orderBtn = $('btnOrder'); const contactBtn = $('btnContact');
+    if(p.link){ orderBtn.href = p.link; contactBtn.href = p.link; orderBtn.style.display='inline-block'; contactBtn.style.display='inline-block'; }
+    else { orderBtn.style.display='none'; contactBtn.style.display='none'; }
+    if(uploadedBlobUrl){ dlLink.href = uploadedBlobUrl; dlLink.target = '_blank'; dlLink.style.display = 'inline'; } else dlLink.style.display = 'none';
+    modal.style.display = 'flex';
+}
+$('closeModal').addEventListener('click', ()=> modal.style.display='none');
+modal.addEventListener('click', e => { if(e.target === modal) modal.style.display='none'; });
+
+// expose a small init for demo: load sample data if needed
+window.__loadSample = function(sample){ products = sample.map(normalizeRow); populateTopicFilter(); currentPage=1; render(); };
+
+// Try auto-load default file on start
+tryAutoLoadDefault();
+</script>
+</body>
+</html>
