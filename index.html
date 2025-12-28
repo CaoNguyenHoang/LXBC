@@ -162,9 +162,11 @@ img { max-width: 100%; display: block; }
 @media (min-width: 1024px) { .team-grid { grid-template-columns: repeat(5, 1fr) !important; } }
 .hidden-item { display: none !important; }
 
+/* --- FIX: Đã xóa contain: paint để sửa lỗi Chrome --- */
 .member-card { 
   background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; 
-  position: relative; cursor: pointer; contain: paint;
+  position: relative; cursor: pointer; 
+  /* contain: paint; <--- ĐÃ XÓA DÒNG NÀY */
   transform: translateZ(0); backface-visibility: hidden; will-change: transform;
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -215,9 +217,11 @@ img { max-width: 100%; display: block; }
 @media (min-width: 600px) { #actGrid { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1024px) { #actGrid { grid-template-columns: repeat(3, 1fr); } }
 
+/* --- FIX: Đã xóa contain: paint để sửa lỗi Chrome --- */
 .act-card { 
   height: 250px; border-radius: 16px; position: relative; overflow: hidden; border: 1px solid var(--border); 
-  background: #000; contain: paint;
+  background: #000; 
+  /* contain: paint; <--- ĐÃ XÓA DÒNG NÀY */
   transform: translateZ(0); backface-visibility: hidden; will-change: transform;
   transition: transform 0.3s; 
 }
@@ -557,9 +561,12 @@ function debounce(func, timeout = 200){
   };
 }
 
+// --- FIX JS: Update hàm normalizeImg để encode URL ---
 const normalizeImg = (u, folder) => {
   u = String(u || '').trim();
   if (!u) return '';
+  
+  // Xử lý link online (Drive, http...)
   if (u.match(/^(http|https|data):/i)) {
     if(u.includes('drive.google.com')) {
       const m = u.match(/\/d\/([^/]+)/);
@@ -567,11 +574,17 @@ const normalizeImg = (u, folder) => {
     }
     return u;
   }
-  u = u.replace(/\\/g, '/');
+
+  // Xử lý đường dẫn file nội bộ
+  u = u.replace(/\\/g, '/'); // Đổi dấu gạch chéo ngược
   const prefix = folder + '/';
   if (u.toLowerCase().startsWith(prefix.toLowerCase())) u = u.substring(prefix.length);
   if (u.startsWith('/')) u = u.substring(1);
-  return folder ? `${folder}/${u}` : u;
+  
+  let fullPath = folder ? `${folder}/${u}` : u;
+  
+  // FIX: Mã hóa URL để Chrome hiểu được tên file có dấu/cách
+  return encodeURI(fullPath);
 };
 
 let MEMBERS = [], ACTS = [];
@@ -837,7 +850,9 @@ window.openMemberModal = (index) => {
       const folderPath = base + '/'; 
       for(let i=1; i<=5; i++) {
         const img = new Image();
-        img.src = `${folderPath}${fileName}${i}${ext}`;
+        const path = `${folderPath}${fileName}${i}${ext}`;
+        // Encode path cho ảnh phụ luôn
+        img.src = encodeURI(path);
         img.onload = () => { galImages.push(img.src); updateGalUI(); };
       }
     }
