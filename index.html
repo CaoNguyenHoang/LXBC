@@ -46,7 +46,7 @@ img { max-width: 100%; display: block; }
   z-index: 1;
 }
 
-/* Quảng cáo 2 bên */
+/* --- QUẢNG CÁO 2 BÊN --- */
 .ad-side {
   width: 160px;
   height: 600px;
@@ -62,11 +62,30 @@ img { max-width: 100%; display: block; }
   transition: all 0.3s;
 }
 .ad-link { display: block; width: 100%; height: 100%; position: relative; text-decoration: none; }
-.ad-side img { width: 100%; height: 100%; object-fit: cover; opacity: 0.25; transition: opacity 0.3s; }
-.ad-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; color: rgba(255,255,255,0.5); font-size: 0.85rem; font-weight: 600; padding: 10px; pointer-events: none; text-transform: uppercase; letter-spacing: 1px; z-index: 2; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-.ad-side:hover { border-color: var(--brand); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 200, 0, 0.1); }
-.ad-side:hover img { opacity: 0.5; filter: grayscale(0); }
-.ad-side:hover .ad-text { color: var(--brand); }
+
+/* Mặc định (khi chưa load ảnh hoặc lỗi): Ảnh tối, đen trắng */
+.ad-side img { 
+  width: 100%; height: 100%; object-fit: cover; 
+  opacity: 0.25; 
+  filter: grayscale(100%); 
+  transition: all 0.5s ease; 
+}
+/* Style cho dòng chữ */
+.ad-text { 
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; 
+  color: rgba(255,255,255,0.5); font-size: 0.85rem; font-weight: 600; padding: 10px; pointer-events: none; 
+  text-transform: uppercase; letter-spacing: 1px; z-index: 2; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  transition: opacity 0.3s;
+}
+
+/* KHI CÓ ẢNH THẬT (Class 'loaded' được thêm tự động) */
+.ad-side.loaded img { opacity: 1 !important; filter: grayscale(0%) !important; }
+.ad-side.loaded .ad-text { display: none !important; opacity: 0; }
+
+.ad-side:not(.loaded):hover img { opacity: 0.5; filter: grayscale(0); }
+.ad-side:not(.loaded):hover .ad-text { color: var(--brand); }
+.ad-side.loaded:hover { border-color: var(--brand); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 200, 0, 0.1); }
+
 @media (min-width: 1450px) { .ad-side { display: block; } }
 
 .container { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
@@ -82,7 +101,6 @@ img { max-width: 100%; display: block; }
 .chip:hover { background: var(--brand); color: #000; border-color: var(--brand); }
 
 .section { padding: 48px 0; border-bottom: 1px solid var(--border); }
-/* GIẢM KHOẢNG CÁCH SECTION GIỚI THIỆU */
 #gioi-thieu { padding-top: 30px; padding-bottom: 40px; }
 
 .section h2 { font-size: clamp(24px, 4vw, 36px); margin: 0 0 20px; font-weight: 800; letter-spacing: -1px; }
@@ -306,13 +324,13 @@ img { max-width: 100%; display: block; }
 
 .m-note { margin-top: 12px; color: var(--brand); font-style: italic; font-size: 0.9rem; font-weight: 500; line-height: 1.4; padding: 4px 12px; border-radius: 6px; background: rgba(255, 200, 0, 0.1); display: inline-block; }
 
+/* --- HERO SLIDER MỚI: AUTO HEIGHT --- */
 #banner-wrapper { 
-  padding: 20px 16px 0 16px; /* Sửa theo yêu cầu cũ */
+  padding: 20px 16px 0 16px; 
   background: #000; 
 }
 .hero-slider { 
   position: relative; 
-  aspect-ratio: 16/9; 
   width: 100%;
   max-width: 1100px; 
   margin: 0 auto; 
@@ -320,13 +338,23 @@ img { max-width: 100%; display: block; }
   background: #000; 
   border-radius: 12px; 
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  transition: all 0.3s ease;
 }
-@media(min-width: 768px) { .hero-slider { aspect-ratio: 21/9; } }
 
-.slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s, transform 1.5s; transform: scale(1.08); will-change: opacity, transform; }
-.slide.active { opacity: 1; transform: scale(1); }
-.slide img { width: 100%; height: 100%; object-fit: cover; }
-.dots { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 10; }
+.slide { 
+  position: absolute; top:0; left:0; width: 100%; opacity: 0; z-index: 1; transition: opacity 1.2s ease; 
+}
+.slide.active { 
+  position: relative; opacity: 1; z-index: 2; 
+}
+.slide img { 
+  width: 100%; height: auto; display: block; object-fit: contain; 
+}
+
+.dots { 
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 10; 
+  padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 20px; backdrop-filter: blur(4px);
+}
 .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; transition: 0.3s; }
 .dot.active { background: var(--brand); transform: scale(1.4); }
 
@@ -341,9 +369,11 @@ footer { border-top: 1px solid var(--border); background: #050505; }
 
 <div class="site-wrapper">
   <aside class="ad-side left">
-    <a href="https://www.facebook.com/SinhVienDonboscoSOB" target="_blank" class="ad-link">
-      <img src="image/banner1.jpg" alt="Quảng cáo" onerror="this.src='https://via.placeholder.com/160x600/222/555?text=ADS'">
-      <div class="ad-text">Liên hệ<br>Quảng cáo<br>Tại 0346146212</div>
+    <a href="https://mobile.mbbank.com.vn/referral/index.html" target="_blank" class="ad-link">
+      <img src="image/mbbank.jpg" alt="MB Bank" 
+           onload="this.closest('.ad-side').classList.add('loaded')"
+           onerror="this.src='https://via.placeholder.com/160x600/0033cc/fff?text=MB+BANK'">
+      <div class="ad-text">Mở thẻ<br>MB Bank<br>Ưu đãi HOT</div>
     </a>
   </aside>
 
@@ -397,7 +427,7 @@ footer { border-top: 1px solid var(--border); background: #050505; }
             <button class="q-btn" onclick="setMode('cuu')" id="btnQ_Cuu">Cựu Thành Viên</button>
             <button class="q-btn" onclick="setMode('ctv')" id="btnQ_CTV" style="display:none">Cộng Tác Viên</button>
             <button class="q-btn" onclick="setMode('pet')" id="btnQ_Pet">Pet</button>
-            <button class="q-btn" onclick="setMode('tt')" id="btnQ_TT">Thành Viên Thường trực</button>
+            <button class="q-btn" onclick="setMode('tt')" id="btnQ_TT" style="display:none">Thành Viên Thường trực</button>
             <button class="q-btn" id="btnOrg">Sơ Đồ</button>
           </div>
         </div>
@@ -430,9 +460,11 @@ footer { border-top: 1px solid var(--border); background: #050505; }
   </main>
 
   <aside class="ad-side right">
-    <a href="https://www.facebook.com/SinhVienDonboscoSOB" target="_blank" class="ad-link">
-      <img src="image/banner2.jpg" alt="Quảng cáo" onerror="this.src='https://via.placeholder.com/160x600/222/555?text=ADS'">
-      <div class="ad-text">Liên hệ<br>Quảng cáo<br>Tại đây 0346146212</div>
+    <a href="https://app.gostream.co" target="_blank" class="ad-link">
+      <img src="image/gostream.jpg" alt="GoStream" 
+           onload="this.closest('.ad-side').classList.add('loaded')"
+           onerror="this.src='https://via.placeholder.com/160x600/ff6600/fff?text=GoStream'">
+      <div class="ad-text">Phần mềm<br>Livestream<br>GoStream</div>
     </a>
   </aside>
 
@@ -657,6 +689,11 @@ function parseMembers(data) {
   const hasCTV = MEMBERS.some(m => m.group === 'ctv');
   const btnCTV = document.getElementById('btnQ_CTV');
   if(btnCTV) btnCTV.style.display = hasCTV ? 'inline-block' : 'none';
+
+  // LOGIC ẨN NÚT THƯỜNG TRỰC (NEW)
+  const hasTT = MEMBERS.some(m => m.group === 'tt');
+  const btnTT = document.getElementById('btnQ_TT');
+  if(btnTT) btnTT.style.display = hasTT ? 'inline-block' : 'none';
 
   updateContactInfo();
   renderAllMembersOnce();
