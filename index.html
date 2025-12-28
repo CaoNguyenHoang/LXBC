@@ -46,7 +46,7 @@ img { max-width: 100%; display: block; }
   z-index: 1;
 }
 
-/* --- QUẢNG CÁO 2 BÊN --- */
+/* --- STYLE QUẢNG CÁO 2 BÊN --- */
 .ad-side {
   width: 160px;
   height: 600px;
@@ -63,14 +63,14 @@ img { max-width: 100%; display: block; }
 }
 .ad-link { display: block; width: 100%; height: 100%; position: relative; text-decoration: none; }
 
-/* Mặc định (khi chưa load ảnh hoặc lỗi): Ảnh tối, đen trắng */
+/* Trạng thái chưa có ảnh thật: Tối & Đen trắng */
 .ad-side img { 
   width: 100%; height: 100%; object-fit: cover; 
   opacity: 0.25; 
   filter: grayscale(100%); 
   transition: all 0.5s ease; 
 }
-/* Style cho dòng chữ */
+/* Style cho dòng chữ đè lên */
 .ad-text { 
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; 
   color: rgba(255,255,255,0.5); font-size: 0.85rem; font-weight: 600; padding: 10px; pointer-events: none; 
@@ -78,10 +78,11 @@ img { max-width: 100%; display: block; }
   transition: opacity 0.3s;
 }
 
-/* KHI CÓ ẢNH THẬT (Class 'loaded' được thêm tự động) */
+/* KHI CÓ ẢNH THẬT (Class 'loaded' được thêm bằng JS) */
 .ad-side.loaded img { opacity: 1 !important; filter: grayscale(0%) !important; }
 .ad-side.loaded .ad-text { display: none !important; opacity: 0; }
 
+/* Hiệu ứng Hover */
 .ad-side:not(.loaded):hover img { opacity: 0.5; filter: grayscale(0); }
 .ad-side:not(.loaded):hover .ad-text { color: var(--brand); }
 .ad-side.loaded:hover { border-color: var(--brand); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 200, 0, 0.1); }
@@ -324,11 +325,12 @@ img { max-width: 100%; display: block; }
 
 .m-note { margin-top: 12px; color: var(--brand); font-style: italic; font-size: 0.9rem; font-weight: 500; line-height: 1.4; padding: 4px 12px; border-radius: 6px; background: rgba(255, 200, 0, 0.1); display: inline-block; }
 
-/* --- HERO SLIDER MỚI: AUTO HEIGHT --- */
+/* --- HERO SLIDER: TỈ LỆ CỐ ĐỊNH THEO ẢNH (4:3) --- */
 #banner-wrapper { 
   padding: 20px 16px 0 16px; 
   background: #000; 
 }
+
 .hero-slider { 
   position: relative; 
   width: 100%;
@@ -338,17 +340,25 @@ img { max-width: 100%; display: block; }
   background: #000; 
   border-radius: 12px; 
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  transition: all 0.3s ease;
+  
+  /* Cố định tỷ lệ 4:3 (gần vuông) cho ảnh tập thể */
+  aspect-ratio: 4 / 3; 
 }
 
 .slide { 
-  position: absolute; top:0; left:0; width: 100%; opacity: 0; z-index: 1; transition: opacity 1.2s ease; 
+  position: absolute; inset: 0; opacity: 0; 
+  transition: opacity 1.2s ease, transform 1.5s ease; 
+  transform: scale(1.08); z-index: 1;
 }
+
 .slide.active { 
-  position: relative; opacity: 1; z-index: 2; 
+  opacity: 1; transform: scale(1); z-index: 2; 
 }
+
 .slide img { 
-  width: 100%; height: auto; display: block; object-fit: contain; 
+  width: 100%; height: 100%; 
+  object-fit: cover; /* Lấp đầy khung */
+  object-position: center top; /* Ưu tiên lấy phần đầu người */
 }
 
 .dots { 
