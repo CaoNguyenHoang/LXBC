@@ -833,7 +833,7 @@ function renderActs() {
     const safePass = a.pass.replace(/'/g, "\\'"); 
 
     if(a.pass && a.pass !== "") {
-        btnHtml = `<button class="act-btn" onclick="checkActPass('${safeLink}', '${safePass}')">🔒 ${a.cta}</button>`;
+        btnHtml = `<button class="act-btn" onclick="checkActPass('${safeLink}', '${safePass}')"> ${a.cta}</button>`;
     } else {
         btnHtml = `<a href="${a.link}" target="_blank" class="act-btn">${a.cta}</a>`;
     }
