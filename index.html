@@ -379,11 +379,11 @@ footer { border-top: 1px solid var(--border); background: #050505; }
 <div id="passModal" class="modal">
   <div class="modal-box" style="max-width: 360px;">
     <div class="modal-header">
-      <div class="modal-title">🔒 Bảo mật</div>
+      <div class="modal-title">Yêu cầu quyền truy cập</d.iv>
       <button class="close-btn" onclick="closeModal('passModal')">×</button>
     </div>
     <div class="modal-content">
-      <p style="color:#ccc; font-size:0.9rem; margin-bottom:12px;">Nội dung này yêu cầu mật khẩu để truy cập.</p>
+      <p style="color:#ccc; font-size:0.9rem; margin-bottom:12px;">Nạp VIP cho Thái để lấy mật khẩu.</p>
       <div class="pass-input-wrap">
         <input type="password" id="userPassInput" class="pass-input" placeholder="Nhập mật khẩu...">
         <div id="passError" class="pass-err-msg">
@@ -886,7 +886,7 @@ function renderActs() {
     const safePass = a.pass.replace(/'/g, "\\'"); 
 
     if(a.pass && a.pass !== "") {
-        btnHtml = `<button class="act-btn" onclick="checkActPass('${safeLink}', '${safePass}')">🔒 ${a.cta}</button>`;
+        btnHtml = `<button class="act-btn" onclick="checkActPass('${safeLink}', '${safePass}')">${a.cta}</button>`;
     } else {
         btnHtml = `<a href="${a.link}" target="_blank" class="act-btn">${a.cta}</a>`;
     }
