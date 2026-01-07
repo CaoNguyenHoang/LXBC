@@ -1,5 +1,5 @@
 Đang bảo trì...
 ------------------------
-📞 Liên hệ kỹ thuật
+📞 Liên hệ
 Developer: HOWL.
 Email: 1026cnh@gmail.com
